@@ -1,0 +1,43 @@
+{
+  "Actions": [
+    {
+      "Icon": "Images/waitingForGameStartSummoner",
+      "Name": "Summoner Spell Timer",
+      "States": [
+        {
+          "Image": "Images/waitingForGameStartSummoner",
+          "TitleAlignment": "middle",
+          "FontSize": "12"
+        }
+      ],
+      "SupportedInMultiActions": false,
+      "Tooltip": "Automagically loads Summoner Spell from selected player into your StreamDeck so you will always know when to predict the enemy",
+      "UUID": "dev.timeblaster.leaguedeck",
+      "PropertyInspectorPath": "PropertyInspector/PluginActionPI.html"
+    }
+  ],
+  "Author": "TimeBlaster",
+  "Name": "LeagueDeck",
+  "Description": "Provides tools to help you keep track of the game.",
+  "Icon": "Images/summonerSpellTimer",
+  "URL": "https://github.com/TimeBlaster/LeagueDeck",
+  "Version": "1.0",
+  "CodePath": "dev.timeblaster.leaguedeck",
+  "Category": "LeagueDeck",
+  "CategoryIcon": "Images/categoryIcon",
+  "OS": [
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "SDKVersion": 2,
+  "Software": {
+    "MinimumVersion": "4.3"
+  },
+  "ApplicationsToMonitor": {
+    "windows": [
+      "League of Legends.exe"
+    ]
+  }
+}
