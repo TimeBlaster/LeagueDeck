@@ -1,6 +1,6 @@
 # LeagueDeck
 
-LeagueDeck is a plugin for the Stream Deck that provides 
+LeagueDeck is a plugin for the Stream Deck that provides tools to help you keep track of your game and enables you to predict your enemies more accurately.
 
 ## Installation
 
