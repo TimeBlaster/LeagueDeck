@@ -73,6 +73,9 @@ namespace LeagueDeck
 
             await ResetTimer();
             await Connection.SetDefaultImageAsync();
+
+            _cts.Cancel();
+            _cts = new CancellationTokenSource();
         }
 
         #endregion
@@ -81,12 +84,12 @@ namespace LeagueDeck
 
         public override async void KeyPressed(KeyPayload payload)
         {
-            if (!_isInGame)
+            if (!_isInGame || _timerEnabled)
                 return;
 
             _keyPressStart = DateTime.Now;
             _keyPressed = true;
-
+            
             var participant = await _info.GetParticipant((int)_settings.Summoner, _cts.Token);
             if (participant == null)
                 return;
@@ -129,9 +132,14 @@ namespace LeagueDeck
                 var diff = _endTime - DateTime.Now;
 
                 if (diff.TotalSeconds <= 0)
+                {
                     await ResetTimer();
+                }
                 else
-                    await Connection.SetTitleAsync(diff.TotalSeconds.ToString("F0"));
+                {
+                    string title = _settings.ShowMinutesAndSeconds ? $"{diff.Minutes}:{diff.Seconds:00}" : $"{diff.TotalSeconds:F0}";
+                    await Connection.SetTitleAsync(title);
+                }
             }
 
             await CheckIfResetNeeded();
@@ -188,16 +196,37 @@ namespace LeagueDeck
             var spell = participant.GetSummonerSpell(_settings.SummonerSpell);
 
             var rest = _endTime - DateTime.Now;
-            var gameData = await _info.GetGameData(_cts.Token);
-            var inGameEndTime = TimeSpan.FromSeconds(gameData.Time).Add(rest);
-            if (inGameEndTime.Seconds == 60)
+
+            string time;
+            switch (_settings.ChatFormat)
             {
-                //reduce inGameTimer so we dont show 60 seconds in the chat
-                //idk if there is a better option ¯\_(ツ)_/¯
-                inGameEndTime.Add(new TimeSpan(0, 0, -1));
+                case EChatFormat.GameTime:
+                    var gameData = await _info.GetGameData(_cts.Token);
+                    var inGameEndTime = TimeSpan.FromSeconds(gameData.Time).Add(rest);
+                    if (inGameEndTime.Seconds == 60)
+                    {
+                        //reduce inGameTimer so we dont show 60 seconds in the chat
+                        //idk if there is a better option ¯\_(ツ)_/¯
+                        inGameEndTime.Add(new TimeSpan(0, 0, -1));
+                    }
+
+                    time = $"{inGameEndTime.Minutes}:{inGameEndTime.Seconds:00}";
+                    break;
+
+                case EChatFormat.RemainingSeconds:
+                    time = $"{rest.TotalSeconds:F0}";
+                    break;
+
+                case EChatFormat.RemainingMinutesAndSeconds:
+                    time = $"{rest.Minutes}:{rest.Seconds:00}";
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(_settings.ChatFormat));
             }
 
-            Utilities.SendMessageInChat(participant.ChampionName, spell, inGameEndTime);
+            var message = $"{participant.ChampionName} - {spell} - {time}";
+            Utilities.SendMessageInChat(message);
         }
 
         private async Task CheckIfResetNeeded()

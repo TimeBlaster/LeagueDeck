@@ -104,12 +104,9 @@ namespace LeagueDeck
         // this is still a bit buggy since you have to press Escape everytime an input is made to be able to use your keyboard again
         // might be specific to League of Legends but I am not sure
         // maybe it's capturing the device and requires another input for a device change
-        public static void SendMessageInChat(string champion, string spell, TimeSpan endTime)
+        public static void SendMessageInChat(string message)
         {
             InputRunning = true;
-
-            var message = $"{champion} - {spell} - {endTime.Minutes}:{endTime.Seconds:00}";
-
             InputSimulator iis = new InputSimulator();
 
             iis.Keyboard.KeyDown(WindowsInput.Native.VirtualKeyCode.RETURN);

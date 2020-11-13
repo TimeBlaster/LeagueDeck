@@ -1,5 +1,12 @@
 ﻿namespace LeagueDeck
 {
+    public enum EChatFormat
+    {
+        GameTime = 0,
+        RemainingSeconds = 1,
+        RemainingMinutesAndSeconds = 2,
+    }
+
     public enum ESummonerSpell
     {
         Spell1 = 0,

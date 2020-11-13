@@ -18,7 +18,7 @@
   ],
   "Author": "TimeBlaster",
   "Name": "LeagueDeck",
-  "Description": "Provides tools to help you keep track of the game.",
+  "Description": "Provides tools for League of Legends to help you keep track of the game.",
   "Icon": "Images/summonerSpellTimer",
   "URL": "https://github.com/TimeBlaster/LeagueDeck",
   "Version": "1.0",
