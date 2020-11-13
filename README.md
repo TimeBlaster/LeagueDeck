@@ -15,7 +15,7 @@ After the download finished just open the file and LeagueDeck should show up in 
 
 Drag the action into your Stream Deck and select the summoner and spell you want to be displayed.\
 Once the game starts the summoner spells from the enemy team are loaded including the champion's icon.\
-You can enable automatic chat messages that display the accurate in game time when the spell will be back up.\
+You can enable automatic chat messages that display the accurate in game time when the spell will be back up.
 
 **!!! Make sure you press Escape after every key press. !!!**\
 Your keyboard is captured for the chat message and I haven't managed to fix that yet.
