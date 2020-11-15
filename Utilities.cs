@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -101,16 +101,22 @@ namespace LeagueDeck
             return grayscaled;
         }
 
-        // this is still a bit buggy since you have to press Escape everytime an input is made to be able to use your keyboard again
-        // might be specific to League of Legends but I am not sure
-        // maybe it's capturing the device and requires another input for a device change
         public static void SendMessageInChat(string message)
         {
             InputRunning = true;
+
             InputSimulator iis = new InputSimulator();
 
+            // open chat
             iis.Keyboard.KeyDown(WindowsInput.Native.VirtualKeyCode.RETURN);
+
+            // enter message
             iis.Keyboard.TextEntry(message);
+
+            // fixes the chat not closing, thanks Timmy
+            Thread.Sleep(10);
+
+            // send message
             iis.Keyboard.KeyDown(WindowsInput.Native.VirtualKeyCode.RETURN);
 
             InputRunning = false;
