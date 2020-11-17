@@ -1,10 +1,8 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Linq;
 using System.Net;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using WindowsInput;
@@ -24,65 +22,25 @@ namespace LeagueDeck
                 new float[] { 0, 0, 0, 0, 1 }
             });
 
-        public static bool InputRunning { get; private set; }
+        private static readonly string _pluginImageFolder = Path.Combine(Environment.CurrentDirectory, "Images", "Plugin");
 
-        public const string cInGameApiBaseUrl = "https://127.0.0.1:2999/liveclientdata";
+        public static bool InputRunning { get; private set; }
 
         #endregion
 
         #region Public Methods
 
-        public static Image GetSummonerSpellImage(string spell)
+        public static Image GetUpdateImage()
         {
-            // Format: "{Namespace}.{Folder}.{filename}.{Extension}"
-            var path = $"LeagueDeck.SummonerSpells.{spell}.png";
-
-            var assembly = typeof(LeagueDeckPlugin).GetTypeInfo().Assembly;
-
-            var resourcePath = assembly.GetManifestResourceNames()
-                .FirstOrDefault(str => str.EndsWith(path));
-
-            // fallback for new summoner spells
-            if (string.IsNullOrEmpty(resourcePath))
-            {
-                path = $"LeagueDeck.SummonerSpells.Missing.png";
-                resourcePath = assembly.GetManifestResourceNames()
-                .Single(str => str.EndsWith(path));
-            }
-
-            using (Stream stream = assembly.GetManifestResourceStream(resourcePath))
-            {
-                return Image.FromStream(stream);
-            }
+            return Image.FromFile(Path.Combine(_pluginImageFolder, "updating@2x.png"));
         }
 
-        public static void AddChampionToSpellImage(Image spellImage, string champion)
+        public static void AddChampionToSpellImage(Image spellImage, Image championImage)
         {
-            // Format: "{Namespace}.{Folder}.{filename}.{Extension}"
-            var path = $"LeagueDeck.Champions.{champion}.png";
-
-            var assembly = typeof(LeagueDeckPlugin).GetTypeInfo().Assembly;
-
-            var resourcePath = assembly.GetManifestResourceNames()
-                .FirstOrDefault(str => str.EndsWith(path));
-
-            // fallback for new champions
-            if (string.IsNullOrEmpty(resourcePath))
+            using (var g = Graphics.FromImage(spellImage))
             {
-                path = $"LeagueDeck.Champions.Missing.png";
-                resourcePath = assembly.GetManifestResourceNames()
-                .Single(str => str.EndsWith(path));
-            }
-
-            using (Stream stream = assembly.GetManifestResourceStream(resourcePath))
-            {
-                var championImage = Image.FromStream(stream);
-
-                using (var g = Graphics.FromImage(spellImage))
-                {
-                    var bounds = new Rectangle(0, 0, 32, 32);
-                    g.DrawImage(championImage, bounds);
-                }
+                var bounds = new Rectangle(0, 0, 32, 32);
+                g.DrawImage(championImage, bounds);
             }
         }
 
@@ -122,10 +80,8 @@ namespace LeagueDeck
             InputRunning = false;
         }
 
-        public static async Task<string> GetApiResponse(string relativeUrl, CancellationToken ct)
+        public static async Task<string> GetApiResponse(string url, CancellationToken ct)
         {
-            var requestUrl = cInGameApiBaseUrl + relativeUrl;
-
             HttpWebResponse response = null;
             while (response == null)
             {
@@ -134,12 +90,16 @@ namespace LeagueDeck
                     if (ct.IsCancellationRequested)
                         return string.Empty;
 
-                    var request = (HttpWebRequest)WebRequest.Create(requestUrl);
+                    var request = (HttpWebRequest)WebRequest.Create(url);
+
+                    // accept all SSL certificates
+                    request.ServerCertificateValidationCallback += (sender, cert, chain, sslPolicyErrors) => true;
+
                     response = (HttpWebResponse)await request.GetResponseAsync();
                 }
                 catch
                 {
-                    await Task.Delay(5000, ct);
+                    await Task.Delay(500, ct);
                 }
             }
 
@@ -151,7 +111,7 @@ namespace LeagueDeck
                 }
             };
         }
-
-        #endregion
     }
+
+    #endregion
 }

@@ -6,29 +6,33 @@ namespace LeagueDeck
     {
         public static LeagueDeckSettings CreateDefaultSettings()
         {
-            LeagueDeckSettings instance = new LeagueDeckSettings();
-            instance.SendMessageInChat = false;
-            instance.ChatFormat = EChatFormat.GameTime;
-            instance.ShowMinutesAndSeconds = false;
-            instance.Summoner = ESummoner.Summoner1;
-            instance.SummonerSpell = ESummonerSpell.Spell1;
-
-            return instance;
+            return new LeagueDeckSettings
+            {
+                SendMessageInChat = false,
+                ShowMinutesAndSeconds = false,
+                Offset = 0,
+                ChatFormat = EChatFormat.GameTime,
+                Summoner = ESummoner.Summoner1,
+                Spell = ESpell.SummonerSpell1,
+            };
         }
 
         [JsonProperty(PropertyName = "sendMessageInChat")]
         public bool SendMessageInChat { get; set; }
 
-        [JsonProperty(PropertyName = "chatFormat")]
-        public EChatFormat ChatFormat { get; set; }
-
         [JsonProperty(PropertyName = "showMinutesAndSeconds")]
         public bool ShowMinutesAndSeconds { get; set; }
+
+        [JsonProperty(PropertyName = "offset")]
+        public int Offset { get; set; }
+
+        [JsonProperty(PropertyName = "chatFormat")]
+        public EChatFormat ChatFormat { get; set; }
 
         [JsonProperty(PropertyName = "summoner")]
         public ESummoner Summoner { get; set; }
 
-        [JsonProperty(PropertyName = "summonerSpell")]
-        public ESummonerSpell SummonerSpell { get; set; }
+        [JsonProperty(PropertyName = "spell")]
+        public ESpell Spell { get; set; }
     }
 }

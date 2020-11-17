@@ -1,0 +1,71 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,minimal-ui,viewport-fit=cover">
+    <meta name=apple-mobile-web-app-capable content=yes>
+    <meta name=apple-mobile-web-app-status-bar-style content=black>
+    <title>LeagueDeck Settings</title>
+    <link rel="stylesheet" href="sdpi.css">
+    <script src="sdtools.common.js"></script>
+    <script src="SpellTimer.js"></script>
+</head>
+<body>
+    <div class="sdpi-wrapper">
+        <div class="sdpi-item" id="dvSummoner">
+            <div class="sdpi-item-label" title="Select the enemy Summoner.">Summoner</div>
+            <select class="sdProperty" name="summoners" id="summoner" oninput="setSettings()">
+                <option value="0">Summoner 1</option>
+                <option value="1">Summoner 2</option>
+                <option value="2">Summoner 3</option>
+                <option value="3">Summoner 4</option>
+                <option value="4">Summoner 5</option>
+            </select>
+        </div>
+
+        <div class="sdpi-item" id="dvSpell">
+            <div class="sdpi-item-label" title="Select the Spell you want to be displayed.">Spell</div>
+            <select class="sdProperty" name="spells" id="spell" oninput="setSettings()">
+                <option value="0">Q</option>
+                <option value="1">W</option>
+                <option value="2">E</option>
+                <option value="3">R</option>
+                <option value="4">Summoner Spell 1</option>
+                <option value="5">Summoner Spell 2</option>
+            </select>
+        </div>
+
+        <div type="checkbox" class="sdpi-item" id="dvDisplayFormat">
+            <div class="sdpi-item-label" title="Displays Minutes and Seconds on the key instead of just Seconds.">Display</div>
+            <div class="sdpi-item-value">
+                <input id="showMinutesAndSeconds" type="checkbox" value="" class="sdProperty sdCheckbox" oninput="setSettings()">
+                <label for="showMinutesAndSeconds" class="sdpi-item-label"><span></span>Show Minutes and Seconds</label>
+            </div>
+        </div>
+
+        <div class="sdpi-item" id="dvOffset">
+            <div class="sdpi-item-label" title="The average time you need to press the button in seconds. Maximum 200 Seconds.">Offset</div>
+            <div class="sdpi-item-value">
+                <input id="offset" type="number" value="0" min="0" max="200" class="sdProperty sdpi-item-value" oninput="setSettings()">
+            </div>
+        </div>
+
+        <div type="checkbox" class="sdpi-item" id="dvSendMessageInChat">
+            <div class="sdpi-item-label" title="Sends a chat message after key press.">Chat</div>
+            <div class="sdpi-item-value">
+                <input id="sendMessageInChat" type="checkbox" value="" class="sdProperty sdCheckbox" oninput="setSettings()">
+                <label for="sendMessageInChat" class="sdpi-item-label"><span></span>Send message in chat</label>
+            </div>
+        </div>
+
+        <div class="sdpi-item" id="dvChatFormat">
+            <div class="sdpi-item-label" title="Time format for the automated chat message.">Chat Time Format</div>
+            <select class="sdProperty" name="chatFormat" id="chatFormat" oninput="setSettings()">
+                <option value="0">GameTime</option>
+                <option value="1">Remaining Seconds</option>
+                <option value="2">Remaining Minutes and Seconds</option>
+            </select>
+        </div>
+    </div>
+</body>
+</html>

@@ -75,12 +75,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Enums.cs" />
+    <Compile Include="LeagueData.cs" />
     <Compile Include="LeagueDeckPlugin.cs" />
     <Compile Include="LeagueDeckSettings.cs" />
     <Compile Include="LeagueInfo.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SummonerData.cs" />
+    <Compile Include="GameData.cs" />
     <Compile Include="Utilities.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -92,183 +93,43 @@
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="SummonerSpells\Missing.png" />
-    <EmbeddedResource Include="SummonerSpells\Hexflash.png" />
-    <EmbeddedResource Include="Champions\Aatrox.png" />
-    <EmbeddedResource Include="Champions\Ahri.png" />
-    <EmbeddedResource Include="Champions\Akali.png" />
-    <EmbeddedResource Include="Champions\Alistar.png" />
-    <EmbeddedResource Include="Champions\Amumu.png" />
-    <EmbeddedResource Include="Champions\Anivia.png" />
-    <EmbeddedResource Include="Champions\Annie.png" />
-    <EmbeddedResource Include="Champions\Aphelios.png" />
-    <EmbeddedResource Include="Champions\Ashe.png" />
-    <EmbeddedResource Include="Champions\Aurelion Sol.png" />
-    <EmbeddedResource Include="Champions\Azir.png" />
-    <EmbeddedResource Include="Champions\Bard.png" />
-    <EmbeddedResource Include="Champions\Blitzcrank.png" />
-    <EmbeddedResource Include="Champions\Brand.png" />
-    <EmbeddedResource Include="Champions\Braum.png" />
-    <EmbeddedResource Include="Champions\Caitlyn.png" />
-    <EmbeddedResource Include="Champions\Camille.png" />
-    <EmbeddedResource Include="Champions\Cassiopeia.png" />
-    <EmbeddedResource Include="Champions\Cho%27Gath.png" />
-    <EmbeddedResource Include="Champions\Corki.png" />
-    <EmbeddedResource Include="Champions\Darius.png" />
-    <EmbeddedResource Include="Champions\Diana.png" />
-    <EmbeddedResource Include="Champions\Dr. Mundo.png" />
-    <EmbeddedResource Include="Champions\Draven.png" />
-    <EmbeddedResource Include="Champions\Ekko.png" />
-    <EmbeddedResource Include="Champions\Elise.png" />
-    <EmbeddedResource Include="Champions\Evelynn.png" />
-    <EmbeddedResource Include="Champions\Ezreal.png" />
-    <EmbeddedResource Include="Champions\Fiddlesticks.png" />
-    <EmbeddedResource Include="Champions\Fiora.png" />
-    <EmbeddedResource Include="Champions\Fizz.png" />
-    <EmbeddedResource Include="Champions\Galio.png" />
-    <EmbeddedResource Include="Champions\Gangplank.png" />
-    <EmbeddedResource Include="Champions\Garen.png" />
-    <EmbeddedResource Include="Champions\Gnar.png" />
-    <EmbeddedResource Include="Champions\Gragas.png" />
-    <EmbeddedResource Include="Champions\Graves.png" />
-    <EmbeddedResource Include="Champions\Hecarim.png" />
-    <EmbeddedResource Include="Champions\Heimerdinger.png" />
-    <EmbeddedResource Include="Champions\Illaoi.png" />
-    <EmbeddedResource Include="Champions\Irelia.png" />
-    <EmbeddedResource Include="Champions\Ivern.png" />
-    <EmbeddedResource Include="Champions\Janna.png" />
-    <EmbeddedResource Include="Champions\Jarvan IV.png" />
-    <EmbeddedResource Include="Champions\Jax.png" />
-    <EmbeddedResource Include="Champions\Jayce.png" />
-    <EmbeddedResource Include="Champions\Jhin.png" />
-    <EmbeddedResource Include="Champions\Jinx.png" />
-    <EmbeddedResource Include="Champions\Kai%27Sa.png" />
-    <EmbeddedResource Include="Champions\Kalista.png" />
-    <EmbeddedResource Include="Champions\Karma.png" />
-    <EmbeddedResource Include="Champions\Karthus.png" />
-    <EmbeddedResource Include="Champions\Kassadin.png" />
-    <EmbeddedResource Include="Champions\Katarina.png" />
-    <EmbeddedResource Include="Champions\Kayle.png" />
-    <EmbeddedResource Include="Champions\Kayn.png" />
-    <EmbeddedResource Include="Champions\Kennen.png" />
-    <EmbeddedResource Include="Champions\Kha%27Zix.png" />
-    <EmbeddedResource Include="Champions\Kindred.png" />
-    <EmbeddedResource Include="Champions\Kled.png" />
-    <EmbeddedResource Include="Champions\Kog%27Maw.png" />
-    <EmbeddedResource Include="Champions\LeBlanc.png" />
-    <EmbeddedResource Include="Champions\Lee Sin.png" />
-    <EmbeddedResource Include="Champions\Leona.png" />
-    <EmbeddedResource Include="Champions\Lillia.png" />
-    <EmbeddedResource Include="Champions\Lissandra.png" />
-    <EmbeddedResource Include="Champions\Lucian.png" />
-    <EmbeddedResource Include="Champions\Lulu.png" />
-    <EmbeddedResource Include="Champions\Lux.png" />
-    <EmbeddedResource Include="Champions\Malphite.png" />
-    <EmbeddedResource Include="Champions\Malzahar.png" />
-    <EmbeddedResource Include="Champions\Maokai.png" />
-    <EmbeddedResource Include="Champions\Master Yi.png" />
-    <EmbeddedResource Include="Champions\Miss Fortune.png" />
-    <EmbeddedResource Include="Champions\Mordekaiser.png" />
-    <EmbeddedResource Include="Champions\Morgana.png" />
-    <EmbeddedResource Include="Champions\Nami.png" />
-    <EmbeddedResource Include="Champions\Nasus.png" />
-    <EmbeddedResource Include="Champions\Nautilus.png" />
-    <EmbeddedResource Include="Champions\Neeko.png" />
-    <EmbeddedResource Include="Champions\Nidalee.png" />
-    <EmbeddedResource Include="Champions\Nocturne.png" />
-    <EmbeddedResource Include="Champions\Nunu &amp; Willump.png" />
-    <EmbeddedResource Include="Champions\Olaf.png" />
-    <EmbeddedResource Include="Champions\Orianna.png" />
-    <EmbeddedResource Include="Champions\Ornn.png" />
-    <EmbeddedResource Include="Champions\Pantheon.png" />
-    <EmbeddedResource Include="Champions\Poppy.png" />
-    <EmbeddedResource Include="Champions\Pyke.png" />
-    <EmbeddedResource Include="Champions\Qiyana.png" />
-    <EmbeddedResource Include="Champions\Quinn.png" />
-    <EmbeddedResource Include="Champions\Rakan.png" />
-    <EmbeddedResource Include="Champions\Rammus.png" />
-    <EmbeddedResource Include="Champions\Rek%27Sai.png" />
-    <EmbeddedResource Include="Champions\Renekton.png" />
-    <EmbeddedResource Include="Champions\Rengar.png" />
-    <EmbeddedResource Include="Champions\Riven.png" />
-    <EmbeddedResource Include="Champions\Rumble.png" />
-    <EmbeddedResource Include="Champions\Ryze.png" />
-    <EmbeddedResource Include="Champions\Samira.png" />
-    <EmbeddedResource Include="Champions\Sejuani.png" />
-    <EmbeddedResource Include="Champions\Senna.png" />
-    <EmbeddedResource Include="Champions\Sett.png" />
-    <EmbeddedResource Include="Champions\Shaco.png" />
-    <EmbeddedResource Include="Champions\Shen.png" />
-    <EmbeddedResource Include="Champions\Shyvana.png" />
-    <EmbeddedResource Include="Champions\Singed.png" />
-    <EmbeddedResource Include="Champions\Sion.png" />
-    <EmbeddedResource Include="Champions\Sivir.png" />
-    <EmbeddedResource Include="Champions\Skarner.png" />
-    <EmbeddedResource Include="Champions\Sona.png" />
-    <EmbeddedResource Include="Champions\Soraka.png" />
-    <EmbeddedResource Include="Champions\Swain.png" />
-    <EmbeddedResource Include="Champions\Sylas.png" />
-    <EmbeddedResource Include="Champions\Syndra.png" />
-    <EmbeddedResource Include="Champions\Tahm Kench.png" />
-    <EmbeddedResource Include="Champions\Taliyah.png" />
-    <EmbeddedResource Include="Champions\Talon.png" />
-    <EmbeddedResource Include="Champions\Taric.png" />
-    <EmbeddedResource Include="Champions\Teemo.png" />
-    <EmbeddedResource Include="Champions\Thresh.png" />
-    <EmbeddedResource Include="Champions\Tristana.png" />
-    <EmbeddedResource Include="Champions\Trundle.png" />
-    <EmbeddedResource Include="Champions\Tryndamere.png" />
-    <EmbeddedResource Include="Champions\Twisted Fate.png" />
-    <EmbeddedResource Include="Champions\Twitch.png" />
-    <EmbeddedResource Include="Champions\Udyr.png" />
-    <EmbeddedResource Include="Champions\Urgot.png" />
-    <EmbeddedResource Include="Champions\Varus.png" />
-    <EmbeddedResource Include="Champions\Vayne.png" />
-    <EmbeddedResource Include="Champions\Veigar.png" />
-    <EmbeddedResource Include="Champions\Vel%27Koz.png" />
-    <EmbeddedResource Include="Champions\Vi.png" />
-    <EmbeddedResource Include="Champions\Viktor.png" />
-    <EmbeddedResource Include="Champions\Vladimir.png" />
-    <EmbeddedResource Include="Champions\Volibear.png" />
-    <EmbeddedResource Include="Champions\Warwick.png" />
-    <EmbeddedResource Include="Champions\Wukong.png" />
-    <EmbeddedResource Include="Champions\Xayah.png" />
-    <EmbeddedResource Include="Champions\Xerath.png" />
-    <EmbeddedResource Include="Champions\Xin Zhao.png" />
-    <EmbeddedResource Include="Champions\Yasuo.png" />
-    <EmbeddedResource Include="Champions\Yone.png" />
-    <EmbeddedResource Include="Champions\Yorick.png" />
-    <EmbeddedResource Include="Champions\Yuumi.png" />
-    <EmbeddedResource Include="Champions\Zac.png" />
-    <EmbeddedResource Include="Champions\Zed.png" />
-    <EmbeddedResource Include="Champions\Ziggs.png" />
-    <EmbeddedResource Include="Champions\Zilean.png" />
-    <EmbeddedResource Include="Champions\Zoe.png" />
-    <EmbeddedResource Include="Champions\Zyra.png" />
-    <EmbeddedResource Include="Champions\Missing.png" />
-    <EmbeddedResource Include="Champions\Seraphine.png" />
-    <Content Include="Images\categoryIcon%402x.png">
+    <Content Include="Images\Champions\Missing.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Images\categoryIcon.png">
+    <Content Include="Images\Plugin\categoryIcon%402x.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Images\pluginIcon%402x.png">
+    <Content Include="Images\Plugin\categoryIcon.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Images\pluginIcon.png">
+    <Content Include="Images\Plugin\pluginIcon%402x.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Images\summonerSpellTimer%402x.png">
+    <Content Include="Images\Plugin\pluginIcon.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Images\summonerSpellTimer.png">
+    <Content Include="Images\Plugin\spellTimer%402x.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Images\waitingForGameStartSummoner%402x.png">
+    <Content Include="Images\Plugin\spellTimer.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Images\waitingForGameStartSummoner.png">
+    <Content Include="Images\Plugin\updating%402x.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\Plugin\updating.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\Plugin\waitingForGameStartTimer%402x.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\Plugin\waitingForGameStartTimer.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\Spells\Missing.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\SummonerSpells\Missing.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="PropertyInspector\caret.svg">
@@ -286,10 +147,10 @@
     <Content Include="PropertyInspector\elg_calendar_inv.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="PropertyInspector\PluginActionPI.html">
+    <Content Include="PropertyInspector\SpellTimer.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="PropertyInspector\PluginActionPI.js">
+    <Content Include="PropertyInspector\SpellTimer.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="PropertyInspector\rcheck.svg">
@@ -301,17 +162,6 @@
     <Content Include="PropertyInspector\sdtools.common.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <EmbeddedResource Include="SummonerSpells\Barrier.png" />
-    <EmbeddedResource Include="SummonerSpells\Clarity.png" />
-    <EmbeddedResource Include="SummonerSpells\Cleanse.png" />
-    <EmbeddedResource Include="SummonerSpells\Exhaust.png" />
-    <EmbeddedResource Include="SummonerSpells\Flash.png" />
-    <EmbeddedResource Include="SummonerSpells\Ghost.png" />
-    <EmbeddedResource Include="SummonerSpells\Heal.png" />
-    <EmbeddedResource Include="SummonerSpells\Ignite.png" />
-    <EmbeddedResource Include="SummonerSpells\Mark.png" />
-    <EmbeddedResource Include="SummonerSpells\Smite.png" />
-    <EmbeddedResource Include="SummonerSpells\Teleport.png" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

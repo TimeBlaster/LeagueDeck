@@ -1,12 +1,13 @@
 ﻿using BarRaider.SdTools;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace LeagueDeck
 {
-    [PluginActionId("dev.timeblaster.leaguedeck")]
+    [PluginActionId("dev.timeblaster.leaguedeck.spelltimer")]
     public class LeagueDeckPlugin : PluginBase
     {
         #region vars
@@ -30,10 +31,14 @@ namespace LeagueDeck
 
         #region ctor
 
-        public LeagueDeckPlugin(SDConnection connection, InitialPayload payload) 
+        public LeagueDeckPlugin(SDConnection connection, InitialPayload payload)
             : base(connection, payload)
         {
-            _info = LeagueInfo.GetInstance();
+            _info = LeagueInfo.GetInstance(_cts.Token);
+
+            _info.OnUpdateStarted += LeagueInfo_OnUpdateStarted;
+            _info.OnUpdateProgress += LeagueInfo_OnUpdateProgress;
+            _info.OnUpdateCompleted += LeagueInfo_OnUpdateCompleted;
 
             Connection.OnApplicationDidLaunch += Connection_OnApplicationDidLaunch;
             Connection.OnApplicationDidTerminate += Connection_OnApplicationDidTerminate;
@@ -55,13 +60,7 @@ namespace LeagueDeck
 
             _isInGame = true;
 
-            var participant = await _info.GetParticipant((int)_settings.Summoner, _cts.Token).ConfigureAwait(false);
-            if (participant == null)
-                return;
-
-            var spell = participant.GetSummonerSpell(_settings.SummonerSpell);
-
-            await UpdateSummonerSpellImage(spell, participant.ChampionName);
+            await UpdateSpellImage();
         }
 
         private async void Connection_OnApplicationDidTerminate(object sender, BarRaider.SdTools.Wrappers.SDEventReceivedEventArgs<BarRaider.SdTools.Events.ApplicationDidTerminate> e)
@@ -78,46 +77,86 @@ namespace LeagueDeck
             _cts = new CancellationTokenSource();
         }
 
+        private async void LeagueInfo_OnUpdateStarted(object sender, LeagueInfo.UpdateEventArgs e)
+        {
+            var image = Utilities.GetUpdateImage();
+            await Connection.SetImageAsync(image);
+        }
+
+        private async void LeagueInfo_OnUpdateProgress(object sender, LeagueInfo.UpdateEventArgs e)
+        {
+            await Connection.SetTitleAsync($"{e.Progress}%");
+        }
+
+        private async void LeagueInfo_OnUpdateCompleted(object sender, LeagueInfo.UpdateEventArgs e)
+        {
+            await Connection.SetDefaultImageAsync();
+            await Connection.SetTitleAsync(string.Empty);
+        }
+
         #endregion
 
         #region Overrides
 
         public override async void KeyPressed(KeyPayload payload)
         {
-            if (!_isInGame || _timerEnabled)
+            if (!_isInGame)
                 return;
 
-            _keyPressStart = DateTime.Now;
             _keyPressed = true;
-            
+            _keyPressStart = DateTime.Now;
+
+            if (_timerEnabled)
+                return;
+
             var participant = await _info.GetParticipant((int)_settings.Summoner, _cts.Token);
             if (participant == null)
                 return;
 
-            var spell = participant.GetSummonerSpell(_settings.SummonerSpell);
+            var champion = _info.GetChampion(participant.ChampionName);
+            var spell = _info.GetSpell(participant, _settings.Spell);
 
-            var gameData = await _info.GetGameData(_cts.Token);
-            var isAram = gameData.GameMode.Equals("ARAM");
+            double cooldown;
+            switch (_settings.Spell)
+            {
+                case ESpell.Q:
+                case ESpell.W:
+                case ESpell.E:
+                case ESpell.R:
+                    cooldown = LeagueInfo.GetSpellCooldown(spell, participant);
+                    break;
 
-            var cooldown = LeagueInfo.GetSummonerSpellCooldown(spell, participant, isAram);
-            _endTime = _keyPressStart.AddSeconds(cooldown);
+                case ESpell.SummonerSpell1:
+                case ESpell.SummonerSpell2:
+                    var gameData = await _info.GetGameData(_cts.Token);
+                    var isAram = gameData.GameMode.Equals("ARAM");
 
-            await UpdateSummonerSpellImage(spell, participant.ChampionName, true);
+                    cooldown = LeagueInfo.GetSummonerSpellCooldown(spell, participant, isAram);
+                    break;
 
-            Logger.Instance.LogMessage(TracingLevel.INFO, "Key Pressed");
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(_settings.Spell));
+            }
+
+            if (cooldown - _settings.Offset <= 0)
+                return;
+
+            _timerEnabled = true;
+
+            _endTime = _keyPressStart.AddSeconds(cooldown - _settings.Offset);
+
+            await UpdateSpellImage(spell, champion, true);
         }
 
         public async override void KeyReleased(KeyPayload payload)
         {
-            _timerEnabled = true;
-
             if (_longPress)
             {
                 await ResetTimer();
             }
             else
             {
-                if (_settings.SendMessageInChat && !Utilities.InputRunning)
+                if (_timerEnabled && _settings.SendMessageInChat && !Utilities.InputRunning)
                     await SendMessageInChat();
             }
 
@@ -160,7 +199,9 @@ namespace LeagueDeck
 
         public override void Dispose()
         {
-            Logger.Instance.LogMessage(TracingLevel.INFO, $"Destructor called");
+            _info.OnUpdateStarted -= LeagueInfo_OnUpdateStarted;
+            _info.OnUpdateProgress -= LeagueInfo_OnUpdateProgress;
+            _info.OnUpdateCompleted -= LeagueInfo_OnUpdateCompleted;
 
             Connection.OnApplicationDidLaunch -= Connection_OnApplicationDidLaunch;
             Connection.OnApplicationDidTerminate -= Connection_OnApplicationDidTerminate;
@@ -173,15 +214,46 @@ namespace LeagueDeck
 
         #region Private Methods
 
-        private async Task UpdateSummonerSpellImage(string spell, string champion, bool grayscaled = false)
+        private async Task UpdateSpellImage()
         {
-            var image = Utilities.GetSummonerSpellImage(spell);
+            var participant = await _info.GetParticipant((int)_settings.Summoner, _cts.Token);
+            if (participant == null)
+                return;
+
+            var champion = _info.GetChampion(participant.ChampionName);
+            var spell = _info.GetSpell(participant, _settings.Spell);
+
+            await UpdateSpellImage(spell, champion);
+        }
+
+        private async Task UpdateSpellImage(Spell spell, Champion champion, bool grayscaled = false)
+        {
+            var championImage = _info.GetChampionImage(champion.Id);
+
+            Image spellImage = null;
+            switch (_settings.Spell)
+            {
+                case ESpell.Q:
+                case ESpell.W:
+                case ESpell.E:
+                case ESpell.R:
+                    spellImage = _info.GetSpellImage(spell.Id);
+                    break;
+
+                case ESpell.SummonerSpell1:
+                case ESpell.SummonerSpell2:
+                    spellImage = _info.GetSummonerSpellImage(spell.Id);
+                    break;
+
+                default:
+                    break;
+            }
 
             if (grayscaled)
-                image = Utilities.GrayscaleImage(image);
+                spellImage = Utilities.GrayscaleImage(spellImage);
 
-            Utilities.AddChampionToSpellImage(image, champion);
-            await Connection.SetImageAsync(image);
+            Utilities.AddChampionToSpellImage(spellImage, championImage);
+            await Connection.SetImageAsync(spellImage);
         }
 
         private async Task SendMessageInChat()
@@ -193,7 +265,7 @@ namespace LeagueDeck
             if (participant == null)
                 return;
 
-            var spell = participant.GetSummonerSpell(_settings.SummonerSpell);
+            var spell = _info.GetSpell(participant, _settings.Spell);
 
             var rest = _endTime - DateTime.Now;
 
@@ -225,7 +297,7 @@ namespace LeagueDeck
                     throw new ArgumentOutOfRangeException(nameof(_settings.ChatFormat));
             }
 
-            var message = $"{participant.ChampionName} - {spell} - {time}";
+            var message = $"{participant.ChampionName} - {spell.Name} - {time}";
             Utilities.SendMessageInChat(message);
         }
 
@@ -247,13 +319,7 @@ namespace LeagueDeck
 
             if (_isInGame)
             {
-                var participant = await _info.GetParticipant((int)_settings.Summoner, _cts.Token);
-                if (participant == null)
-                    return;
-
-                var spell = participant.GetSummonerSpell(_settings.SummonerSpell);
-
-                await UpdateSummonerSpellImage(spell, participant.ChampionName);
+                await UpdateSpellImage();
             }
             else
             {

@@ -7,10 +7,14 @@
         RemainingMinutesAndSeconds = 2,
     }
 
-    public enum ESummonerSpell
+    public enum ESpell
     {
-        Spell1 = 0,
-        Spell2 = 1,
+        Q = 0,
+        W = 1,
+        E = 2,
+        R = 3,
+        SummonerSpell1 = 4,
+		SummonerSpell2 = 5,
     }
 
     public enum ESummoner
