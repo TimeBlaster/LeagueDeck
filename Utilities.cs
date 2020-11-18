@@ -72,7 +72,7 @@ namespace LeagueDeck
             iis.Keyboard.TextEntry(message);
 
             // fixes the chat not closing, thanks Timmy
-            Thread.Sleep(10);
+            Thread.Sleep(50);
 
             // send message
             iis.Keyboard.KeyDown(WindowsInput.Native.VirtualKeyCode.RETURN);
