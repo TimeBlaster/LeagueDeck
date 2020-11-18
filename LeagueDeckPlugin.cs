@@ -19,7 +19,6 @@ namespace LeagueDeck
         private LeagueDeckSettings _settings;
 
         private LeagueInfo _info;
-        private bool _updating;
         private bool _isInGame;
 
         private DateTime _keyPressStart;
@@ -35,11 +34,11 @@ namespace LeagueDeck
         public LeagueDeckPlugin(SDConnection connection, InitialPayload payload)
             : base(connection, payload)
         {
-            _info = LeagueInfo.GetInstance(_cts.Token);
+            LeagueInfo.OnUpdateStarted += LeagueInfo_OnUpdateStarted;
+            LeagueInfo.OnUpdateProgress += LeagueInfo_OnUpdateProgress;
+            LeagueInfo.OnUpdateCompleted += LeagueInfo_OnUpdateCompleted;
 
-            _info.OnUpdateStarted += LeagueInfo_OnUpdateStarted;
-            _info.OnUpdateProgress += LeagueInfo_OnUpdateProgress;
-            _info.OnUpdateCompleted += LeagueInfo_OnUpdateCompleted;
+            _info = LeagueInfo.GetInstance(_cts.Token);
 
             Connection.OnApplicationDidLaunch += Connection_OnApplicationDidLaunch;
             Connection.OnApplicationDidTerminate += Connection_OnApplicationDidTerminate;
@@ -59,7 +58,7 @@ namespace LeagueDeck
             if (e.Event.Payload.Application != "League of Legends.exe")
                 return;
 
-            while(_updating)
+            while(_info.Updating)
             {
                 if (_cts.IsCancellationRequested)
                     return;
@@ -89,8 +88,6 @@ namespace LeagueDeck
 
         private async void LeagueInfo_OnUpdateStarted(object sender, LeagueInfo.UpdateEventArgs e)
         {
-            _updating = true;
-
             var image = Utilities.GetUpdateImage();
             await Connection.SetImageAsync(image);
         }
@@ -104,8 +101,6 @@ namespace LeagueDeck
         {
             await Connection.SetDefaultImageAsync();
             await Connection.SetTitleAsync(string.Empty);
-
-            _updating = false;
         }
 
         #endregion
@@ -213,9 +208,9 @@ namespace LeagueDeck
 
         public override void Dispose()
         {
-            _info.OnUpdateStarted -= LeagueInfo_OnUpdateStarted;
-            _info.OnUpdateProgress -= LeagueInfo_OnUpdateProgress;
-            _info.OnUpdateCompleted -= LeagueInfo_OnUpdateCompleted;
+            LeagueInfo.OnUpdateStarted -= LeagueInfo_OnUpdateStarted;
+            LeagueInfo.OnUpdateProgress -= LeagueInfo_OnUpdateProgress;
+            LeagueInfo.OnUpdateCompleted -= LeagueInfo_OnUpdateCompleted;
 
             Connection.OnApplicationDidLaunch -= Connection_OnApplicationDidLaunch;
             Connection.OnApplicationDidTerminate -= Connection_OnApplicationDidTerminate;

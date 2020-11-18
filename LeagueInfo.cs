@@ -25,9 +25,9 @@ namespace LeagueDeck
             }
         }
 
-        public event EventHandler<UpdateEventArgs> OnUpdateStarted;
-        public event EventHandler<UpdateEventArgs> OnUpdateCompleted;
-        public event EventHandler<UpdateEventArgs> OnUpdateProgress;
+        public static event EventHandler<UpdateEventArgs> OnUpdateStarted;
+        public static event EventHandler<UpdateEventArgs> OnUpdateCompleted;
+        public static event EventHandler<UpdateEventArgs> OnUpdateProgress;
 
         #endregion
 
@@ -61,6 +61,8 @@ namespace LeagueDeck
         private readonly string _missingSpellImagePath = Path.Combine(Environment.CurrentDirectory, "Images", "Spells", "Missing.png");
         private readonly string _missingSummonerSpellImagePath = Path.Combine(Environment.CurrentDirectory, "Images", "SummonerSpells", "Missing.png");
 
+        public bool Updating { get; private set; }
+
         #endregion
 
         #region ctor
@@ -68,6 +70,7 @@ namespace LeagueDeck
         private LeagueInfo(CancellationToken ct)
         {
             OnUpdateStarted?.Invoke(this, new UpdateEventArgs(0));
+            Updating = true;
 
             Task.Run(async () =>
             {
@@ -86,6 +89,7 @@ namespace LeagueDeck
                     await UpdateData(version, path, ct);
                 }
 
+                Updating = false;
                 OnUpdateCompleted?.Invoke(this, new UpdateEventArgs(1));
             });
         }
