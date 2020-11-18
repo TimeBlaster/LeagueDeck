@@ -45,12 +45,13 @@ namespace LeagueDeck
         private string _latestVersion;
 
         private const string cInGameApiBaseUrl = "https://127.0.0.1:2999/liveclientdata";
-        private const string cVersionsUrl = "https://ddragon.leagueoflegends.com/api/versions.json";
-        private const string cChampionsDataUrl = "http://ddragon.leagueoflegends.com/cdn/{0}/data/en_US/champion.json";
-        private const string cChampionDataUrl = "http://ddragon.leagueoflegends.com/cdn/{0}/data/en_US/champion/{1}.json";
-        private const string cChampionImageUrl = "http://ddragon.leagueoflegends.com/cdn/{0}/img/champion/{1}.png";
-        private const string cSummonerSpellDataUrl = "http://ddragon.leagueoflegends.com/cdn/{0}/data/en_US/summoner.json";
-        private const string cSpellImageUrl = "http://ddragon.leagueoflegends.com/cdn/{0}/img/spell/{1}.png";
+        private const string cVersionsUrl = "https://ddragon.bangingheads.net/api/versions.json";
+        private const string cChampionsDataUrl = "https://ddragon.bangingheads.net/cdn/{0}/data/en_US/champion.json";
+        private const string cChampionDataUrl = "https://ddragon.bangingheads.net/cdn/{0}/data/en_US/champion/{1}.json";
+        private const string cChampionImageUrl = "https://ddragon.bangingheads.net/cdn/{0}/img/champion/{1}.png";
+        private const string cSummonerSpellDataUrl = "https://ddragon.bangingheads.net/cdn/{0}/data/en_US/summoner.json";
+        private const string cSpellImageUrl = "https://ddragon.bangingheads.net/cdn/{0}/img/spell/{1}.png";
+        private const string cItemDataUrl = "https://ddragon.bangingheads.net/cdn/{0}/data/en_US/item.json";
 
         private readonly string _championImageFolder = Path.Combine(Environment.CurrentDirectory, "Images", "Champions");
         private readonly string _spellImageFolder = Path.Combine(Environment.CurrentDirectory, "Images", "Spells");
@@ -66,6 +67,8 @@ namespace LeagueDeck
 
         private LeagueInfo(CancellationToken ct)
         {
+            OnUpdateStarted?.Invoke(this, new UpdateEventArgs(0));
+
             Task.Run(async () =>
             {
                 var version = await GetLatestVersion(ct);
@@ -82,6 +85,8 @@ namespace LeagueDeck
                 {
                     await UpdateData(version, path, ct);
                 }
+
+                OnUpdateCompleted?.Invoke(this, new UpdateEventArgs(1));
             });
         }
 
@@ -97,7 +102,7 @@ namespace LeagueDeck
             return _instance;
         }
 
-        public static double GetSpellCooldown(Spell spell, SummonerData participant)
+        public double GetSpellCooldown(Spell spell, SummonerData participant)
         {
             // assuming the player always levels when possible
             // TODO: check for special level behaviour(Elise, Jayce, Karma, ...)
@@ -110,15 +115,19 @@ namespace LeagueDeck
             else
                 cooldown = spell.Cooldown[2];
 
-            int abilityHaste = 0;
-            // TODO: get Ability Haste from items
+            double abilityHaste = 0;
+            foreach (var itemId in participant.Items.Select(x => x.Id))
+            {
+                var item = GetItem(itemId);
+                abilityHaste += item.AbilityHaste;
+            }
 
             // TODO: check for runes
 
             return cooldown / (1 + (abilityHaste / 100));
         }
 
-        public static double GetSummonerSpellCooldown(Spell spell, SummonerData participant, bool isAram)
+        public double GetSummonerSpellCooldown(Spell spell, SummonerData participant, bool isAram)
         {
             double cooldown;
             // SummonerSpellData contains no info about tp cooldown
@@ -132,11 +141,11 @@ namespace LeagueDeck
 
             int summonerSpellHaste = 0;
 
-            // TODO: check for runes
-
             // check for Ionian Boots of Lucidity
             if (participant.Items.Any(x => x.Id == 3158))
                 summonerSpellHaste += 10;
+
+            // TODO: check for runes
 
             return cooldown / (1 + (summonerSpellHaste / 100));
         }
@@ -226,16 +235,20 @@ namespace LeagueDeck
             return Image.FromFile(path);
         }
 
+        public Item GetItem(int itemId)
+        {
+            return _data.Items.FirstOrDefault(x => x.Id == itemId);
+        }
+
         #endregion
 
         #region Private Methods
 
         private async Task UpdateData(string version, string path, CancellationToken ct)
         {
-            OnUpdateStarted?.Invoke(this, new UpdateEventArgs(0));
-
             var champions = await GetChampions(ct);
             var summonerSpells = await GetSummonerSpells(ct);
+            var items = await GetItems(ct);
 
             using (var wc = new WebClient())
             {
@@ -274,12 +287,11 @@ namespace LeagueDeck
             {
                 Champions = champions,
                 SummonerSpells = summonerSpells,
+                Items = items,
             };
 
             var json = JsonConvert.SerializeObject(_data);
             File.WriteAllText(path, json);
-
-            OnUpdateCompleted?.Invoke(this, new UpdateEventArgs(1));
         }
 
         private async Task<string> GetLatestVersion(CancellationToken ct)
@@ -361,6 +373,45 @@ namespace LeagueDeck
             }
 
             return summonerSpellList;
+        }
+
+        private async Task<List<Item>> GetItems(CancellationToken ct)
+        {
+            var itemList = new List<Item>();
+
+            var latestVersion = await GetLatestVersion(ct);
+            var url = string.Format(cItemDataUrl, latestVersion);
+
+            var itemJson = await Utilities.GetApiResponse(url, ct);
+            var items = JsonConvert.DeserializeObject<JObject>(itemJson);
+            var data = items.GetValue("data", StringComparison.OrdinalIgnoreCase);
+            var children = data.Children<JProperty>();
+
+            foreach (var child in children)
+            {
+                if (!int.TryParse(child.Name, out int id))
+                    continue;
+
+                var item = child.First;
+
+                var name = item["name"].Value<string>();
+
+                var stats = item["stats"];
+                var modifier = stats.Cast<JProperty>().FirstOrDefault(x => x.Name == "AbilityHasteMod");
+
+                var abilityHaste = 0d;
+                if (modifier != null)
+                    abilityHaste = modifier.First.Value<double>();
+
+                itemList.Add(new Item
+                {
+                    Id = id,
+                    Name = name,
+                    AbilityHaste = abilityHaste
+                });
+            }
+
+            return itemList;
         }
 
         private async Task<List<SummonerData>> GetParticipants(CancellationToken ct)

@@ -137,7 +137,7 @@ namespace LeagueDeck
                 case ESpell.W:
                 case ESpell.E:
                 case ESpell.R:
-                    cooldown = LeagueInfo.GetSpellCooldown(spell, participant);
+                    cooldown = _info.GetSpellCooldown(spell, participant);
                     break;
 
                 case ESpell.SummonerSpell1:
@@ -145,7 +145,7 @@ namespace LeagueDeck
                     var gameData = await _info.GetGameData(_cts.Token);
                     var isAram = gameData.GameMode.Equals("ARAM");
 
-                    cooldown = LeagueInfo.GetSummonerSpellCooldown(spell, participant, isAram);
+                    cooldown = _info.GetSummonerSpellCooldown(spell, participant, isAram);
                     break;
 
                 default:

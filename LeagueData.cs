@@ -6,6 +6,7 @@ namespace LeagueDeck
     {
         public List<Champion> Champions { get; set; }
         public List<Spell> SummonerSpells { get; set; }
+        public List<Item> Items { get; set; }
     }
 
     public class Champion
@@ -21,5 +22,12 @@ namespace LeagueDeck
         public string Name { get; set; }
         public int MaxRank { get; set; }
         public List<double> Cooldown { get; set; }
+    }
+
+    public class Item
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public double AbilityHaste { get; set; }
     }
 }
