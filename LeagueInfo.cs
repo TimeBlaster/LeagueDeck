@@ -39,7 +39,6 @@ namespace LeagueDeck
         private int _total = 0;
 
         private string _activePlayerName;
-        private List<SummonerData> _participants;
 
         private LeagueData _data;
         private string _latestVersion;
@@ -162,7 +161,11 @@ namespace LeagueDeck
 
             var activePlayerName = await GetActivePlayer(ct);
 
-            var team = participants.FirstOrDefault(x => x.SummonerName == activePlayerName).Team;
+            var activePlayer = participants.FirstOrDefault(x => x.SummonerName == activePlayerName);
+            if (activePlayer == null)
+                return null;
+
+            var team = activePlayer.Team;
             var enemyTeamParticipants = participants.Where(x => x.Team != team);
             var participant = enemyTeamParticipants.ElementAtOrDefault(index);
 
@@ -420,16 +423,22 @@ namespace LeagueDeck
 
         private async Task<List<SummonerData>> GetParticipants(CancellationToken ct)
         {
-            try
+            List<SummonerData> participants = null;
+            while (participants == null || participants.Count == 0)
             {
-                var url = cInGameApiBaseUrl + "/playerlist";
-                var json = await Utilities.GetApiResponse(url, ct);
-                _participants = JsonConvert.DeserializeObject<List<SummonerData>>(json);
+                try
+                {
+                    var url = cInGameApiBaseUrl + "/playerlist";
+                    var json = await Utilities.GetApiResponse(url, ct);
+                    participants = JsonConvert.DeserializeObject<List<SummonerData>>(json);
+                }
+                catch
+                {
+                    await Task.Delay(500, ct);
+                }
             }
-            catch
-            { }
 
-            return _participants;
+            return participants;
         }
 
         private async Task<string> GetActivePlayer(CancellationToken ct)
