@@ -19,6 +19,7 @@ namespace LeagueDeck
         private LeagueDeckSettings _settings;
 
         private LeagueInfo _info;
+        private bool _updating;
         private bool _isInGame;
 
         private DateTime _keyPressStart;
@@ -58,6 +59,14 @@ namespace LeagueDeck
             if (e.Event.Payload.Application != "League of Legends.exe")
                 return;
 
+            while(_updating)
+            {
+                if (_cts.IsCancellationRequested)
+                    return;
+
+                await Task.Delay(500, _cts.Token);
+            }
+
             _isInGame = true;
 
             await UpdateSpellImage();
@@ -71,14 +80,17 @@ namespace LeagueDeck
             _isInGame = false;
 
             await ResetTimer();
-            await Connection.SetDefaultImageAsync();
 
             _cts.Cancel();
             _cts = new CancellationTokenSource();
+
+            await Connection.SetDefaultImageAsync();
         }
 
         private async void LeagueInfo_OnUpdateStarted(object sender, LeagueInfo.UpdateEventArgs e)
         {
+            _updating = true;
+
             var image = Utilities.GetUpdateImage();
             await Connection.SetImageAsync(image);
         }
@@ -92,6 +104,8 @@ namespace LeagueDeck
         {
             await Connection.SetDefaultImageAsync();
             await Connection.SetTitleAsync(string.Empty);
+
+            _updating = false;
         }
 
         #endregion
@@ -228,8 +242,6 @@ namespace LeagueDeck
 
         private async Task UpdateSpellImage(Spell spell, Champion champion, bool grayscaled = false)
         {
-            var championImage = _info.GetChampionImage(champion.Id);
-
             Image spellImage = null;
             switch (_settings.Spell)
             {
@@ -252,7 +264,9 @@ namespace LeagueDeck
             if (grayscaled)
                 spellImage = Utilities.GrayscaleImage(spellImage);
 
+            var championImage = _info.GetChampionImage(champion?.Id);
             Utilities.AddChampionToSpellImage(spellImage, championImage);
+
             await Connection.SetImageAsync(spellImage);
         }
 
