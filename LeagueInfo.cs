@@ -56,6 +56,9 @@ namespace LeagueDeck
         private readonly string _spellImageFolder = Path.Combine(Environment.CurrentDirectory, "Images", "Spells");
         private readonly string _summonerSpellImageFolder = Path.Combine(Environment.CurrentDirectory, "Images", "SummonerSpells");
         private readonly string _leagueDataFolder = Path.Combine(Environment.CurrentDirectory, "LeagueData");
+        private readonly string _missingChampionImagePath = Path.Combine(Environment.CurrentDirectory, "Images", "Champions", "Missing.png");
+        private readonly string _missingSpellImagePath = Path.Combine(Environment.CurrentDirectory, "Images", "Spells", "Missing.png");
+        private readonly string _missingSummonerSpellImagePath = Path.Combine(Environment.CurrentDirectory, "Images", "SummonerSpells", "Missing.png");
 
         #endregion
 
@@ -169,7 +172,12 @@ namespace LeagueDeck
 
         public Image GetChampionImage(string championName)
         {
-            return Image.FromFile(Path.Combine(_championImageFolder, $"{championName}.png"));
+            var path = Path.Combine(_championImageFolder, $"{championName}.png");
+
+            if (!File.Exists(path))
+                path = _missingChampionImagePath;
+
+            return Image.FromFile(path);
         }
 
         public Spell GetSummonerSpell(string spellName)
@@ -179,7 +187,12 @@ namespace LeagueDeck
 
         public Image GetSummonerSpellImage(string spellName)
         {
-            return Image.FromFile(Path.Combine(_summonerSpellImageFolder, $"{spellName}.png"));
+            var path = Path.Combine(_summonerSpellImageFolder, $"{spellName}.png");
+
+            if (!File.Exists(path))
+                path = _missingSummonerSpellImagePath;
+
+            return Image.FromFile(path);
         }
 
         public Spell GetSpell(SummonerData participant, ESpell spell)
@@ -205,7 +218,12 @@ namespace LeagueDeck
 
         public Image GetSpellImage(string spellName)
         {
-            return Image.FromFile(Path.Combine(_spellImageFolder, $"{spellName}.png"));
+            var path = Path.Combine(_spellImageFolder, $"{spellName}.png");
+
+            if (!File.Exists(path))
+                path = _missingSpellImagePath;
+
+            return Image.FromFile(path);
         }
 
         #endregion
