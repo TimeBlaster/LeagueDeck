@@ -34,6 +34,8 @@ namespace LeagueDeck
         public LeagueDeckPlugin(SDConnection connection, InitialPayload payload)
             : base(connection, payload)
         {
+            Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Constructor called");
+
             LeagueInfo.OnUpdateStarted += LeagueInfo_OnUpdateStarted;
             LeagueInfo.OnUpdateProgress += LeagueInfo_OnUpdateProgress;
             LeagueInfo.OnUpdateCompleted += LeagueInfo_OnUpdateCompleted;
@@ -58,7 +60,9 @@ namespace LeagueDeck
             if (e.Event.Payload.Application != "League of Legends.exe")
                 return;
 
-            while(_info.Updating)
+            Logger.Instance.LogMessage(TracingLevel.DEBUG, "GameStarted");
+
+            while (_info.Updating)
             {
                 if (_cts.IsCancellationRequested)
                     return;
@@ -208,6 +212,8 @@ namespace LeagueDeck
 
         public override void Dispose()
         {
+            Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Destructor called");
+
             LeagueInfo.OnUpdateStarted -= LeagueInfo_OnUpdateStarted;
             LeagueInfo.OnUpdateProgress -= LeagueInfo_OnUpdateProgress;
             LeagueInfo.OnUpdateCompleted -= LeagueInfo_OnUpdateCompleted;
@@ -237,7 +243,9 @@ namespace LeagueDeck
 
         private async Task UpdateSpellImage(Spell spell, Champion champion, bool grayscaled = false)
         {
-            Image spellImage = null;
+            Logger.Instance.LogMessage(TracingLevel.DEBUG, "Spell Image Update - initiated");
+
+            Image spellImage;
             switch (_settings.Spell)
             {
                 case ESpell.Q:
@@ -253,7 +261,7 @@ namespace LeagueDeck
                     break;
 
                 default:
-                    break;
+                    throw new ArgumentOutOfRangeException(nameof(_settings.Spell));
             }
 
             if (grayscaled)
@@ -263,12 +271,15 @@ namespace LeagueDeck
             Utilities.AddChampionToSpellImage(spellImage, championImage);
 
             await Connection.SetImageAsync(spellImage);
+            Logger.Instance.LogMessage(TracingLevel.DEBUG, "Spell Image Update - completed");
         }
 
         private async Task SendMessageInChat()
         {
             if (!_timerEnabled)
                 return;
+
+            Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Chat Message - initiated");
 
             var participant = await _info.GetParticipant((int)_settings.Summoner, _cts.Token);
             if (participant == null)
@@ -308,6 +319,7 @@ namespace LeagueDeck
 
             var message = $"{participant.ChampionName} - {spell.Name} - {time}";
             Utilities.SendMessageInChat(message);
+            Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Chat Message - completed");
         }
 
         private async Task CheckIfResetNeeded()
@@ -324,6 +336,8 @@ namespace LeagueDeck
 
         private async Task ResetTimer()
         {
+            Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Timer Reset - initiated");
+
             _timerEnabled = false;
 
             if (_isInGame)
@@ -336,6 +350,7 @@ namespace LeagueDeck
             }
 
             await Connection.SetTitleAsync(string.Empty);
+            Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Timer Reset - completed");
         }
 
         #endregion

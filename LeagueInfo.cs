@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using BarRaider.SdTools;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -68,6 +69,8 @@ namespace LeagueDeck
 
         private LeagueInfo(CancellationToken ct)
         {
+            Logger.Instance.LogMessage(TracingLevel.DEBUG, "LeagueInfo - Constructor");
+
             OnUpdateStarted?.Invoke(this, new UpdateEventArgs(0));
             Updating = true;
 
@@ -155,6 +158,8 @@ namespace LeagueDeck
 
         public async Task<SummonerData> GetParticipant(int index, CancellationToken ct)
         {
+            Logger.Instance.LogMessage(TracingLevel.DEBUG, "GetParticipant - initiated");
+
             var participants = await GetParticipants(ct);
             if (participants == null)
                 return null;
@@ -167,7 +172,9 @@ namespace LeagueDeck
 
             var team = activePlayer.Team;
             var enemyTeamParticipants = participants.Where(x => x.Team != team);
-            var participant = enemyTeamParticipants.ElementAtOrDefault(index);
+            var participant = enemyTeamParticipants?.ElementAtOrDefault(index);
+
+            Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Participant Found - {participant != null}");
 
             return participant;
         }
@@ -183,7 +190,14 @@ namespace LeagueDeck
 
         public Champion GetChampion(string championName)
         {
-            return _data.Champions.FirstOrDefault(x => x.Name == championName);
+            var champion = _data.Champions.FirstOrDefault(x => x.Name == championName);
+            if (champion == null)
+            {
+                champion = Champion.Default;
+                Logger.Instance.LogMessage(TracingLevel.ERROR, $"Champion not found: {championName}");
+            }
+
+            return champion;
         }
 
         public Image GetChampionImage(string championName)
@@ -198,7 +212,14 @@ namespace LeagueDeck
 
         public Spell GetSummonerSpell(string spellName)
         {
-            return _data.SummonerSpells.FirstOrDefault(x => x.Name == spellName);
+            var spell = _data.SummonerSpells.FirstOrDefault(x => x.Name == spellName);
+            if (spell == null)
+            {
+                spell = Spell.Default;
+                Logger.Instance.LogMessage(TracingLevel.ERROR, $"Spell not found: {spellName}");
+            }
+
+            return spell;
         }
 
         public Image GetSummonerSpellImage(string spellName)
@@ -211,25 +232,36 @@ namespace LeagueDeck
             return Image.FromFile(path);
         }
 
-        public Spell GetSpell(SummonerData participant, ESpell spell)
+        public Spell GetSpell(SummonerData participant, ESpell spellId)
         {
-            switch (spell)
+            Spell spell;
+            switch (spellId)
             {
                 case ESpell.Q:
                 case ESpell.W:
                 case ESpell.E:
                 case ESpell.R:
                     var champion = GetChampion(participant.ChampionName);
-                    return champion.Spells[(int)spell];
+                    spell = champion.Spells.ElementAtOrDefault((int)spellId);
+                    break;
 
                 case ESpell.SummonerSpell1:
                 case ESpell.SummonerSpell2:
-                    var spellName = participant.GetSummonerSpell(spell);
-                    return GetSummonerSpell(spellName);
+                    var spellName = participant.GetSummonerSpell(spellId);
+                    spell = GetSummonerSpell(spellName);
+                    break;
 
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(spell));
+                    throw new ArgumentOutOfRangeException(nameof(spellId));
             }
+
+            if (spell == null)
+            {
+                Logger.Instance.LogMessage(TracingLevel.ERROR, $"Spell not found: {participant.ChampionName} - {spellId}");
+                return Spell.Default;
+            }
+
+            return spell;
         }
 
         public Image GetSpellImage(string spellName)
@@ -244,7 +276,14 @@ namespace LeagueDeck
 
         public Item GetItem(int itemId)
         {
-            return _data.Items.FirstOrDefault(x => x.Id == itemId);
+            var item = _data.Items.FirstOrDefault(x => x.Id == itemId);
+            if (item == null)
+            {
+                item = Item.Default;
+                Logger.Instance.LogMessage(TracingLevel.ERROR, $"Item not found: {itemId}");
+            }
+
+            return item;
         }
 
         #endregion
@@ -253,6 +292,8 @@ namespace LeagueDeck
 
         private async Task UpdateData(string version, string path, CancellationToken ct)
         {
+            Logger.Instance.LogMessage(TracingLevel.DEBUG, "UpdateData - initiated");
+
             var champions = await GetChampions(ct);
             var summonerSpells = await GetSummonerSpells(ct);
             var items = await GetItems(ct);
@@ -299,6 +340,8 @@ namespace LeagueDeck
 
             var json = JsonConvert.SerializeObject(_data);
             File.WriteAllText(path, json);
+
+            Logger.Instance.LogMessage(TracingLevel.DEBUG, "UpdateData - completed");
         }
 
         private async Task<string> GetLatestVersion(CancellationToken ct)

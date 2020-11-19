@@ -14,6 +14,20 @@ namespace LeagueDeck
         public string Id { get; set; }
         public string Name { get; set; }
         public List<Spell> Spells { get; set; }
+
+        public static Champion Default = new Champion
+        {
+            Id = "???",
+            Name = "???",
+            Spells = new List<Spell>
+            {
+                Spell.Default,
+                Spell.Default,
+                Spell.Default,
+                Spell.Default,
+                Spell.Default,
+            }
+        };
     }
 
     public class Spell
@@ -22,6 +36,14 @@ namespace LeagueDeck
         public string Name { get; set; }
         public int MaxRank { get; set; }
         public List<double> Cooldown { get; set; }
+
+        public static Spell Default = new Spell
+        {
+            Id = "???",
+            Name = "???",
+            MaxRank = 6,
+            Cooldown = new List<double> { 0, 0, 0, 0, 0, 0 }
+        };
     }
 
     public class Item
@@ -29,5 +51,12 @@ namespace LeagueDeck
         public int Id { get; set; }
         public string Name { get; set; }
         public double AbilityHaste { get; set; }
+
+        public static Item Default = new Item
+        {
+            Id = 0,
+            Name = "???",
+            AbilityHaste = 0,
+        };
     }
 }
