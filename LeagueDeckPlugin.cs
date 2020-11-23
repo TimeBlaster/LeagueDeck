@@ -1,4 +1,4 @@
-﻿using BarRaider.SdTools;
+using BarRaider.SdTools;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Drawing;
@@ -317,7 +317,12 @@ namespace LeagueDeck
                     throw new ArgumentOutOfRangeException(nameof(_settings.ChatFormat));
             }
 
-            var message = $"{participant.ChampionName} - {spell.Name} - {time}";
+            string message;
+            if (!_settings.ShowAbilityName && _settings.Spell != ESpell.SummonerSpell1 && _settings.Spell != ESpell.SummonerSpell2)
+                message = $"{participant.ChampionName} - {Enum.GetName(typeof(ESpell), _settings.Spell)} - {time}";
+            else
+                message = $"{participant.ChampionName} - {spell.Name} - {time}";
+
             Utilities.SendMessageInChat(message);
             Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Chat Message - completed");
         }
