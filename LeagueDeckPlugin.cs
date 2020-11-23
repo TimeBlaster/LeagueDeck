@@ -122,9 +122,11 @@ namespace LeagueDeck
             if (_timerEnabled)
                 return;
 
-            var participant = await _info.GetParticipant((int)_settings.Summoner, _cts.Token);
-            if (participant == null)
+            var enemies = await _info.GetEnemies(_cts.Token);
+            if (enemies == null || enemies.Count - 1 < (int)_settings.Summoner)
                 return;
+
+            var participant = enemies[(int)_settings.Summoner];
 
             var champion = _info.GetChampion(participant.ChampionName);
             var spell = _info.GetSpell(participant, _settings.Spell);
@@ -135,8 +137,17 @@ namespace LeagueDeck
                 case ESpell.Q:
                 case ESpell.W:
                 case ESpell.E:
-                case ESpell.R:
                     cooldown = _info.GetSpellCooldown(spell, participant);
+                    break;
+
+                case ESpell.R:
+                    var events = await _info.GetEventData(_cts.Token);
+                    var enemySummonerNames = enemies.Select(y => y.SummonerName);
+                    var cloudDrakes = events
+                        .Where(x => x.Type == EEventType.DragonKill && x.DragonType == "AIR")
+                        .Count(x => enemySummonerNames.Contains(x.KillerName));
+
+                    cooldown = _info.GetUltimateCooldown(spell, participant, cloudDrakes);
                     break;
 
                 case ESpell.SummonerSpell1:
@@ -281,9 +292,11 @@ namespace LeagueDeck
 
             Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Chat Message - initiated");
 
-            var participant = await _info.GetParticipant((int)_settings.Summoner, _cts.Token);
-            if (participant == null)
+            var enemies = await _info.GetEnemies(_cts.Token);
+            if (enemies == null || enemies.Count - 1 < (int)_settings.Summoner)
                 return;
+
+            var participant = enemies[(int)_settings.Summoner];
 
             var spell = _info.GetSpell(participant, _settings.Spell);
 

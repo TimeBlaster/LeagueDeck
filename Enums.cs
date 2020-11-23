@@ -1,4 +1,4 @@
-﻿namespace LeagueDeck
+namespace LeagueDeck
 {
     public enum EChatFormat
     {
@@ -24,5 +24,21 @@
         Summoner3 = 2,
         Summoner4 = 3,
         Summoner5 = 4,
+    }
+
+    public enum EEventType
+    {
+        GameStart,
+        MinionsSpawning,
+        FirstBrick,
+        FirstBlood,
+        ChampionKill,
+        Multikill,
+        Ace,
+        DragonKill,
+        HeraldKill,
+        BaronKill,
+        TurretKilled,
+        InhibKilled,
     }
 }

@@ -1,4 +1,4 @@
-﻿using BarRaider.SdTools;
+using BarRaider.SdTools;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -112,16 +112,48 @@ namespace LeagueDeck
         {
             // assuming the player always levels when possible
             // TODO: check for special level behaviour(Elise, Jayce, Karma, ...)
-            // TODO: basic abilities
-            double cooldown;
-            if (participant.Level < 11)
+            double cooldown = 0;
+            if (spell.MaxRank >= 1 && participant.Level < 3)
                 cooldown = spell.Cooldown[0];
-            else if (participant.Level < 16)
+            else if (spell.MaxRank >= 2 && participant.Level < 5)
                 cooldown = spell.Cooldown[1];
-            else
+            else if (spell.MaxRank >= 3 && participant.Level < 7)
+                cooldown = spell.Cooldown[2];
+            else if (spell.MaxRank >= 4 && participant.Level < 9)
+                cooldown = spell.Cooldown[3];
+            else if (spell.MaxRank >= 5 && participant.Level < 11)
+                cooldown = spell.Cooldown[4];
+            else if (spell.MaxRank >= 6)
+                cooldown = spell.Cooldown[5];
+
+            double abilityHaste = 0;
+            foreach (var itemId in participant.Items.Select(x => x.Id))
+            {
+                var item = GetItem(itemId);
+                abilityHaste += item.AbilityHaste;
+            }
+
+            // TODO: check for runes
+
+            return cooldown / (1 + (abilityHaste / 100));
+        }
+
+        public double GetUltimateCooldown(Spell spell, SummonerData participant, int cloudDrakes = 0)
+        {
+            // assuming the player always levels when possible
+            // TODO: check for special level behaviour(Elise, Jayce, Karma, ...)
+            double cooldown = 0;
+            if (spell.MaxRank >= 1 && participant.Level < 11)
+                cooldown = spell.Cooldown[0];
+            else if (spell.MaxRank >= 2 && participant.Level < 16)
+                cooldown = spell.Cooldown[1];
+            else if (spell.MaxRank >= 3)
                 cooldown = spell.Cooldown[2];
 
             double abilityHaste = 0;
+
+            abilityHaste += cloudDrakes * 10;
+
             foreach (var itemId in participant.Items.Select(x => x.Id))
             {
                 var item = GetItem(itemId);
@@ -186,6 +218,16 @@ namespace LeagueDeck
             var gameData = JsonConvert.DeserializeObject<GameData>(response);
 
             return gameData;
+        }
+
+        public async Task<List<GameEvent>> GetEventData(CancellationToken ct)
+        {
+            var url = cInGameApiBaseUrl + "/eventdata";
+            var response = await Utilities.GetApiResponse(url, ct);
+            var eventData = JsonConvert.DeserializeObject<JObject>(response);
+            var events = eventData["Events"].ToObject<List<GameEvent>>();
+
+            return events;
         }
 
         public Champion GetChampion(string championName)
