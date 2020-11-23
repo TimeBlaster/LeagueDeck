@@ -1,7 +1,8 @@
-using BarRaider.SdTools;
+﻿using BarRaider.SdTools;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Drawing;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -62,17 +63,12 @@ namespace LeagueDeck
 
             Logger.Instance.LogMessage(TracingLevel.DEBUG, "GameStarted");
 
-            while (_info.Updating)
-            {
-                if (_cts.IsCancellationRequested)
-                    return;
-
-                await Task.Delay(500, _cts.Token);
-            }
-
-            _isInGame = true;
-
-            await UpdateSpellImage();
+            await Task.WhenAll(new[] { _info.LoadGameData(_cts.Token), _info.UpdateTask })
+                .ContinueWith(async (x) =>
+                {
+                    _isInGame = true;
+                    await UpdateSpellImage();
+                });
         }
 
         private async void Connection_OnApplicationDidTerminate(object sender, BarRaider.SdTools.Wrappers.SDEventReceivedEventArgs<BarRaider.SdTools.Events.ApplicationDidTerminate> e)
@@ -83,6 +79,8 @@ namespace LeagueDeck
             _isInGame = false;
 
             await ResetTimer();
+
+            _info.ClearGameData();
 
             _cts.Cancel();
             _cts = new CancellationTokenSource();
@@ -129,7 +127,7 @@ namespace LeagueDeck
             var participant = enemies[(int)_settings.Summoner];
 
             var champion = _info.GetChampion(participant.ChampionName);
-            var spell = _info.GetSpell(participant, _settings.Spell);
+            var spell = _info.GetSpell(_settings.Summoner, _settings.Spell);
 
             double cooldown;
             switch (_settings.Spell)
@@ -144,7 +142,7 @@ namespace LeagueDeck
                     var events = await _info.GetEventData(_cts.Token);
                     var enemySummonerNames = enemies.Select(y => y.SummonerName);
                     var cloudDrakes = events
-                        .Where(x => x.Type == EEventType.DragonKill && x.DragonType == "AIR")
+                        .Where(x => x.Type == EEventType.DragonKill && x.DragonType == "Air")
                         .Count(x => enemySummonerNames.Contains(x.KillerName));
 
                     cooldown = _info.GetUltimateCooldown(spell, participant, cloudDrakes);
@@ -159,6 +157,7 @@ namespace LeagueDeck
                     break;
 
                 default:
+                    Logger.Instance.LogMessage(TracingLevel.DEBUG, $"KeyPressed - out of range: {_settings.Spell}");
                     throw new ArgumentOutOfRangeException(nameof(_settings.Spell));
             }
 
@@ -242,12 +241,8 @@ namespace LeagueDeck
 
         private async Task UpdateSpellImage()
         {
-            var participant = await _info.GetParticipant((int)_settings.Summoner, _cts.Token);
-            if (participant == null)
-                return;
-
-            var champion = _info.GetChampion(participant.ChampionName);
-            var spell = _info.GetSpell(participant, _settings.Spell);
+            var spell = _info.GetSpell(_settings.Summoner, _settings.Spell);
+            var champion = _info.GetChampion(_settings.Summoner);
 
             await UpdateSpellImage(spell, champion);
         }
@@ -256,6 +251,12 @@ namespace LeagueDeck
         {
             Logger.Instance.LogMessage(TracingLevel.DEBUG, "Spell Image Update - initiated");
 
+            if (spell == null)
+                Logger.Instance.LogMessage(TracingLevel.DEBUG, "Spell Image Update - spell is null");
+
+            if (champion == null)
+                Logger.Instance.LogMessage(TracingLevel.DEBUG, "Spell Image Update - champion is null");
+
             Image spellImage;
             switch (_settings.Spell)
             {
@@ -263,15 +264,16 @@ namespace LeagueDeck
                 case ESpell.W:
                 case ESpell.E:
                 case ESpell.R:
-                    spellImage = _info.GetSpellImage(spell.Id);
+                    spellImage = _info.GetSpellImage(spell?.Id);
                     break;
 
                 case ESpell.SummonerSpell1:
                 case ESpell.SummonerSpell2:
-                    spellImage = _info.GetSummonerSpellImage(spell.Id);
+                    spellImage = _info.GetSummonerSpellImage(spell?.Id);
                     break;
 
                 default:
+                    Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Spell Image Update - out of range: {_settings.Spell}");
                     throw new ArgumentOutOfRangeException(nameof(_settings.Spell));
             }
 
@@ -279,9 +281,9 @@ namespace LeagueDeck
                 spellImage = Utilities.GrayscaleImage(spellImage);
 
             var championImage = _info.GetChampionImage(champion?.Id);
-            Utilities.AddChampionToSpellImage(spellImage, championImage);
+            var image = Utilities.AddChampionToSpellImage(spellImage, championImage);
 
-            await Connection.SetImageAsync(spellImage);
+            await Connection.SetImageAsync(image);
             Logger.Instance.LogMessage(TracingLevel.DEBUG, "Spell Image Update - completed");
         }
 
@@ -298,7 +300,7 @@ namespace LeagueDeck
 
             var participant = enemies[(int)_settings.Summoner];
 
-            var spell = _info.GetSpell(participant, _settings.Spell);
+            var spell = _info.GetSpell(_settings.Summoner, _settings.Spell);
 
             var rest = _endTime - DateTime.Now;
 
@@ -327,6 +329,7 @@ namespace LeagueDeck
                     break;
 
                 default:
+                    Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Chat Message - out of range: {_settings.ChatFormat}");
                     throw new ArgumentOutOfRangeException(nameof(_settings.ChatFormat));
             }
 

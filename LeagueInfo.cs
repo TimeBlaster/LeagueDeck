@@ -1,8 +1,9 @@
-using BarRaider.SdTools;
+﻿using BarRaider.SdTools;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -47,7 +48,7 @@ namespace LeagueDeck
         private const string cInGameApiBaseUrl = "https://127.0.0.1:2999/liveclientdata";
         private const string cVersionsUrl = "https://ddragon.bangingheads.net/api/versions.json";
         private const string cChampionsDataUrl = "https://ddragon.bangingheads.net/cdn/{0}/data/en_US/champion.json";
-        private const string cChampionDataUrl = "https://ddragon.bangingheads.net/cdn/{0}/data/en_US/champion/{1}.json";
+        private const string cChampionDataUrl = "https://ddragon.bangingheads.net/cdn/{0}/data/en_US/champion/{2}.json";
         private const string cChampionImageUrl = "https://ddragon.bangingheads.net/cdn/{0}/img/champion/{1}.png";
         private const string cSummonerSpellDataUrl = "https://ddragon.bangingheads.net/cdn/{0}/data/en_US/summoner.json";
         private const string cSpellImageUrl = "https://ddragon.bangingheads.net/cdn/{0}/img/spell/{1}.png";
@@ -57,11 +58,17 @@ namespace LeagueDeck
         private readonly string _spellImageFolder = Path.Combine(Environment.CurrentDirectory, "Images", "Spells");
         private readonly string _summonerSpellImageFolder = Path.Combine(Environment.CurrentDirectory, "Images", "SummonerSpells");
         private readonly string _leagueDataFolder = Path.Combine(Environment.CurrentDirectory, "LeagueData");
-        private readonly string _missingChampionImagePath = Path.Combine(Environment.CurrentDirectory, "Images", "Champions", "Missing.png");
-        private readonly string _missingSpellImagePath = Path.Combine(Environment.CurrentDirectory, "Images", "Spells", "Missing.png");
-        private readonly string _missingSummonerSpellImagePath = Path.Combine(Environment.CurrentDirectory, "Images", "SummonerSpells", "Missing.png");
+        private readonly string _missingChampionImageId = "MissingChampion";
+        private readonly string _missingSpellImageId = "MissingSpell";
+        private readonly string _missingSummonerSpellImageId = "MissingSummonerSpell";
 
-        public bool Updating { get; private set; }
+        private Dictionary<ESummoner, Dictionary<ESpell, Spell>> SummonerToSpells = new Dictionary<ESummoner, Dictionary<ESpell, Spell>>();
+        private Dictionary<ESummoner, Champion> SummonerToChampion = new Dictionary<ESummoner, Champion>();
+        private Dictionary<string, Image> IdToImage = new Dictionary<string, Image>();
+
+        public Task UpdateTask { get; private set; }
+        public Task LoadGameDataTask { get; private set; }
+
 
         #endregion
 
@@ -72,9 +79,8 @@ namespace LeagueDeck
             Logger.Instance.LogMessage(TracingLevel.DEBUG, "LeagueInfo - Constructor");
 
             OnUpdateStarted?.Invoke(this, new UpdateEventArgs(0));
-            Updating = true;
 
-            Task.Run(async () =>
+            UpdateTask = Task.Run(async () =>
             {
                 var version = await GetLatestVersion(ct);
 
@@ -91,7 +97,6 @@ namespace LeagueDeck
                     await UpdateData(version, path, ct);
                 }
 
-                Updating = false;
                 OnUpdateCompleted?.Invoke(this, new UpdateEventArgs(1));
             });
         }
@@ -106,6 +111,85 @@ namespace LeagueDeck
                 _instance = new LeagueInfo(ct);
 
             return _instance;
+        }
+
+        public async Task LoadGameData(CancellationToken ct)
+        {
+            if (LoadGameDataTask == null)
+            {
+                LoadGameDataTask = Task.Run(async () =>
+                {
+                    await UpdateTask;
+
+                    Debug.WriteLine("Loading Game Data -  initiated");
+
+                    var participants = await GetParticipants(ct);
+                    var activePlayerName = await GetActivePlayer(ct);
+
+                    var activePlayer = participants.FirstOrDefault(x => x.SummonerName == activePlayerName);
+                    if (activePlayer == null)
+                        return;
+
+                    var team = activePlayer.Team;
+                    var enemies = participants.Where(x => x.Team != team).ToList();
+
+                    for (int i = 0; i < enemies.Count(); i++)
+                    {
+                        var enemy = enemies[i];
+
+                        var champion = GetChampion(enemy.ChampionName);
+                        SummonerToChampion[(ESummoner)i] = champion;
+                        IdToImage[champion.Id] = GetChampionImage(champion.Id);
+
+                        var spellDict = new Dictionary<ESpell, Spell>();
+
+                        var summonerSpell1 = GetSummonerSpell(enemy.SummonerSpells.Spell1.Id);
+                        spellDict[ESpell.SummonerSpell1] = summonerSpell1;
+                        if (!IdToImage.ContainsKey(summonerSpell1.Id))
+                            IdToImage[summonerSpell1.Id] = GetSummonerSpellImage(summonerSpell1.Id);
+
+                        var summonerSpell2 = GetSummonerSpell(enemy.SummonerSpells.Spell2.Id);
+                        spellDict[ESpell.SummonerSpell2] = summonerSpell2;
+                        if (!IdToImage.ContainsKey(summonerSpell2.Id))
+                            IdToImage[summonerSpell2.Id] = GetSummonerSpellImage(summonerSpell2.Id);
+
+                        var spells = champion.Spells;
+
+                        var q = spells[0];
+                        spellDict[ESpell.Q] = q;
+                        if (!IdToImage.ContainsKey(q.Id))
+                            IdToImage[q.Id] = GetSpellImage(q.Id);
+
+                        var w = spells[1];
+                        spellDict[ESpell.W] = w;
+                        if (!IdToImage.ContainsKey(w.Id))
+                            IdToImage[w.Id] = GetSpellImage(w.Id);
+
+                        var e = spells[2];
+                        spellDict[ESpell.E] = e;
+                        if (!IdToImage.ContainsKey(e.Id))
+                            IdToImage[e.Id] = GetSpellImage(e.Id);
+
+                        var r = spells[3];
+                        spellDict[ESpell.R] = r;
+                        if (!IdToImage.ContainsKey(r.Id))
+                            IdToImage[r.Id] = GetSpellImage(r.Id);
+
+                        SummonerToSpells[(ESummoner)i] = spellDict;
+                    }
+
+                    Debug.WriteLine("Loading Game Data - completed");
+                });
+            }
+
+            await LoadGameDataTask;
+        }
+
+        public void ClearGameData()
+        {
+            SummonerToChampion.Clear();
+            SummonerToSpells.Clear();
+            IdToImage.Clear();
         }
 
         public double GetSpellCooldown(Spell spell, SummonerData participant)
@@ -188,9 +272,9 @@ namespace LeagueDeck
             return cooldown / (1 + (summonerSpellHaste / 100));
         }
 
-        public async Task<SummonerData> GetParticipant(int index, CancellationToken ct)
+        public async Task<List<SummonerData>> GetEnemies(CancellationToken ct)
         {
-            Logger.Instance.LogMessage(TracingLevel.DEBUG, "GetParticipant - initiated");
+            Logger.Instance.LogMessage(TracingLevel.DEBUG, "GetEnemies - initiated");
 
             var participants = await GetParticipants(ct);
             if (participants == null)
@@ -203,12 +287,11 @@ namespace LeagueDeck
                 return null;
 
             var team = activePlayer.Team;
-            var enemyTeamParticipants = participants.Where(x => x.Team != team);
-            var participant = enemyTeamParticipants?.ElementAtOrDefault(index);
+            var enemies = participants.Where(x => x.Team != team).ToList();
 
-            Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Participant Found - {participant != null}");
+            Logger.Instance.LogMessage(TracingLevel.DEBUG, "GetEnemies - completed");
 
-            return participant;
+            return enemies;
         }
 
         public async Task<GameData> GetGameData(CancellationToken ct)
@@ -242,78 +325,113 @@ namespace LeagueDeck
             return champion;
         }
 
-        public Image GetChampionImage(string championName)
+        internal Champion GetChampion(ESummoner summoner)
         {
-            var path = Path.Combine(_championImageFolder, $"{championName}.png");
+            if (!SummonerToChampion.TryGetValue(summoner, out var champion))
+            {
+                champion = Champion.Default;
+                Logger.Instance.LogMessage(TracingLevel.ERROR, $"Champion for Summoner not found: {summoner}");
+            }
 
-            if (!File.Exists(path))
-                path = _missingChampionImagePath;
-
-            return Image.FromFile(path);
+            return champion;
         }
 
-        public Spell GetSummonerSpell(string spellName)
+        public Image GetChampionImage(string championId)
         {
-            var spell = _data.SummonerSpells.FirstOrDefault(x => x.Name == spellName);
+            if (string.IsNullOrWhiteSpace(championId))
+                championId = _missingChampionImageId;
+
+            if (!IdToImage.TryGetValue(championId, out var image))
+            {
+                var path = Path.Combine(_championImageFolder, $"{championId}.png");
+
+                if (!File.Exists(path))
+                {
+                    Logger.Instance.LogMessage(TracingLevel.ERROR, $"GetChampionImage - file not found: {path}");
+                    championId = _missingChampionImageId;
+                    path = Path.Combine(_championImageFolder, $"{championId}.png");
+                }
+
+                image = Image.FromFile(path);
+                IdToImage[championId] = image;
+            }
+
+            return image;
+        }
+
+        public Spell GetSummonerSpell(string spellId)
+        {
+            var spell = _data.SummonerSpells.FirstOrDefault(x => x.Id == spellId);
             if (spell == null)
             {
                 spell = Spell.Default;
-                Logger.Instance.LogMessage(TracingLevel.ERROR, $"Spell not found: {spellName}");
+                Logger.Instance.LogMessage(TracingLevel.ERROR, $"Spell not found: {spellId}");
             }
 
             return spell;
         }
 
-        public Image GetSummonerSpellImage(string spellName)
+        public Image GetSummonerSpellImage(string spellId = null)
         {
-            var path = Path.Combine(_summonerSpellImageFolder, $"{spellName}.png");
+            if (string.IsNullOrWhiteSpace(spellId))
+                spellId = _missingSummonerSpellImageId;
 
-            if (!File.Exists(path))
-                path = _missingSummonerSpellImagePath;
-
-            return Image.FromFile(path);
-        }
-
-        public Spell GetSpell(SummonerData participant, ESpell spellId)
-        {
-            Spell spell;
-            switch (spellId)
+            if (!IdToImage.TryGetValue(spellId, out var image))
             {
-                case ESpell.Q:
-                case ESpell.W:
-                case ESpell.E:
-                case ESpell.R:
-                    var champion = GetChampion(participant.ChampionName);
-                    spell = champion.Spells.ElementAtOrDefault((int)spellId);
-                    break;
+                var path = Path.Combine(_summonerSpellImageFolder, $"{spellId}.png");
 
-                case ESpell.SummonerSpell1:
-                case ESpell.SummonerSpell2:
-                    var spellName = participant.GetSummonerSpell(spellId);
-                    spell = GetSummonerSpell(spellName);
-                    break;
+                if (!File.Exists(path))
+                {
+                    Logger.Instance.LogMessage(TracingLevel.ERROR, $"GetSummonerSpellImage - file not found: {path}");
+                    spellId = _missingSummonerSpellImageId;
+                    path = Path.Combine(_summonerSpellImageFolder, $"{spellId}.png");
+                }
 
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(spellId));
+                image = Image.FromFile(path);
+                IdToImage[spellId] = image;
             }
 
-            if (spell == null)
+            return image;
+        }
+
+        public Spell GetSpell(ESummoner summoner, ESpell spellId)
+        {
+            if (!SummonerToSpells.TryGetValue(summoner, out var spells))
             {
-                Logger.Instance.LogMessage(TracingLevel.ERROR, $"Spell not found: {participant.ChampionName} - {spellId}");
+                Logger.Instance.LogMessage(TracingLevel.ERROR, $"Summoner not found: {summoner} - {spellId}");
+                return Spell.Default;
+            }
+
+            if (!spells.TryGetValue(spellId, out var spell))
+            {
+                Logger.Instance.LogMessage(TracingLevel.ERROR, $"Spell not found: {summoner} - {spellId}");
                 return Spell.Default;
             }
 
             return spell;
         }
 
-        public Image GetSpellImage(string spellName)
+        public Image GetSpellImage(string spellId)
         {
-            var path = Path.Combine(_spellImageFolder, $"{spellName}.png");
+            if (string.IsNullOrWhiteSpace(spellId))
+                spellId = _missingSpellImageId;
 
-            if (!File.Exists(path))
-                path = _missingSpellImagePath;
+            if (!IdToImage.TryGetValue(spellId, out var image))
+            {
+                var path = Path.Combine(_spellImageFolder, $"{spellId}.png");
 
-            return Image.FromFile(path);
+                if (!File.Exists(path))
+                {
+                    Logger.Instance.LogMessage(TracingLevel.ERROR, $"GetSpellImage - file not found: {path}");
+                    spellId = _missingSpellImageId;
+                    path = Path.Combine(_spellImageFolder, $"{spellId}.png");
+                }
+
+                image = Image.FromFile(path);
+                IdToImage[spellId] = image;
+            }
+
+            return image;
         }
 
         public Item GetItem(int itemId)
@@ -499,7 +617,7 @@ namespace LeagueDeck
                 {
                     Id = id,
                     Name = name,
-                    AbilityHaste = abilityHaste
+                    AbilityHaste = abilityHaste,
                 });
             }
 

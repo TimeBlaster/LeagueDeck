@@ -93,7 +93,7 @@
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Images\Champions\Missing.png">
+    <Content Include="Images\Champions\MissingChampion.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Images\Plugin\categoryIcon%402x.png">
@@ -126,10 +126,10 @@
     <Content Include="Images\Plugin\waitingForGameStartTimer.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Images\Spells\Missing.png">
+    <Content Include="Images\Spells\MissingSpell.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Images\SummonerSpells\Missing.png">
+    <Content Include="Images\SummonerSpells\MissingSummonerSpell.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="PropertyInspector\caret.svg">

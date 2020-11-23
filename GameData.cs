@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
@@ -42,10 +42,10 @@ namespace LeagueDeck
             switch (spell)
             {
                 case ESpell.SummonerSpell1:
-                    return SummonerSpells.Spell1.Name;
+                    return SummonerSpells.Spell1.Id;
 
                 case ESpell.SummonerSpell2:
-                    return SummonerSpells.Spell2.Name;
+                    return SummonerSpells.Spell2.Id;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(spell));
@@ -97,8 +97,13 @@ namespace LeagueDeck
 
     public class SummonerSpell
     {
+        public string Id => RawDisplayName.Replace("GeneratedTip_SummonerSpell_", string.Empty).Replace("_DisplayName", string.Empty);
+
         [JsonProperty("displayName")]
-        public string Name { get; set; }
+        public string LocalizedName { get; set; }
+
+        [JsonProperty("rawDisplayName")]
+        public string RawDisplayName { get; set; }
     }
 
     public class GameData

@@ -40,13 +40,17 @@ namespace LeagueDeck
             return _updateImage;
         }
 
-        public static void AddChampionToSpellImage(Image spellImage, Image championImage)
+        public static Image AddChampionToSpellImage(Image spellImage, Image championImage)
         {
-            using (var g = Graphics.FromImage(spellImage))
+            Bitmap image = (Bitmap)spellImage.Clone();
+
+            using (var g = Graphics.FromImage(image))
             {
                 var bounds = new Rectangle(0, 0, 32, 32);
                 g.DrawImage(championImage, bounds);
             }
+
+            return image;
         }
 
         public static Image GrayscaleImage(Image source)
