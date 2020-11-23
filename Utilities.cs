@@ -22,7 +22,9 @@ namespace LeagueDeck
                 new float[] { 0, 0, 0, 0, 1 }
             });
 
+        private const string cUpdateImageName = "updating@2x.png";
         private static readonly string _pluginImageFolder = Path.Combine(Environment.CurrentDirectory, "Images", "Plugin");
+        private static Image _updateImage;
 
         public static bool InputRunning { get; private set; }
 
@@ -32,7 +34,10 @@ namespace LeagueDeck
 
         public static Image GetUpdateImage()
         {
-            return Image.FromFile(Path.Combine(_pluginImageFolder, "updating@2x.png"));
+            if (_updateImage == null)
+                _updateImage = Image.FromFile(Path.Combine(_pluginImageFolder, cUpdateImageName));
+
+            return _updateImage;
         }
 
         public static void AddChampionToSpellImage(Image spellImage, Image championImage)
@@ -56,6 +61,7 @@ namespace LeagueDeck
                     g.DrawImage(source, new Rectangle(0, 0, source.Width, source.Height), 0, 0, source.Width, source.Height, GraphicsUnit.Pixel, attributes);
                 }
             }
+
             return grayscaled;
         }
 
@@ -68,11 +74,13 @@ namespace LeagueDeck
             // open chat
             iis.Keyboard.KeyDown(WindowsInput.Native.VirtualKeyCode.RETURN);
 
+            Thread.Sleep(20);
+
             // enter message
             iis.Keyboard.TextEntry(message);
 
             // fixes the chat not closing, thanks Timmy
-            Thread.Sleep(50);
+            Thread.Sleep(20);
 
             // send message
             iis.Keyboard.KeyDown(WindowsInput.Native.VirtualKeyCode.RETURN);
@@ -111,7 +119,8 @@ namespace LeagueDeck
                 }
             };
         }
-    }
 
-    #endregion
+        #endregion
+    
+    }
 }
