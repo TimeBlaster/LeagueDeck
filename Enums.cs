@@ -40,5 +40,6 @@ namespace LeagueDeck
         BaronKill,
         TurretKilled,
         InhibKilled,
+		InhibRespawningSoon,
     }
 }
