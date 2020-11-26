@@ -1,4 +1,4 @@
-﻿using BarRaider.SdTools;
+using BarRaider.SdTools;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -187,6 +187,7 @@ namespace LeagueDeck
 
         public void ClearGameData()
         {
+            LoadGameDataTask = null;
             SummonerToChampion.Clear();
             SummonerToSpells.Clear();
             IdToImage.Clear();
