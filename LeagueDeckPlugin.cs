@@ -50,6 +50,12 @@ namespace LeagueDeck
                 this._settings = LeagueDeckSettings.CreateDefaultSettings();
             else
                 this._settings = payload.Settings.ToObject<LeagueDeckSettings>();
+
+            if(_info.UpdateTask != null)
+            {
+                var image = Utilities.GetUpdateImage();
+                Connection.SetImageAsync(image);
+            }
         }
 
         #endregion
