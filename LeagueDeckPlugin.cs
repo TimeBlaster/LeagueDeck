@@ -53,8 +53,16 @@ namespace LeagueDeck
 
             if(_info.UpdateTask != null)
             {
-                var image = Utilities.GetUpdateImage();
-                Connection.SetImageAsync(image);
+                Task.Run(async () =>
+                {
+                    var image = Utilities.GetUpdateImage();
+                    await Connection.SetImageAsync(image);
+
+                    await _info.UpdateTask;
+
+                    await Connection.SetDefaultImageAsync();
+                    await Connection.SetTitleAsync(string.Empty);
+                });
             }
         }
 
