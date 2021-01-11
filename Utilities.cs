@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -37,7 +37,11 @@ namespace LeagueDeck
             if (_updateImage == null)
                 _updateImage = Image.FromFile(Path.Combine(_pluginImageFolder, cUpdateImageName));
 
-            return _updateImage;
+            lock (_updateImage)
+            {
+                return (Image)_updateImage.Clone();
+            }
+        }
         }
 
         public static Image AddChampionToSpellImage(Image spellImage, Image championImage)
