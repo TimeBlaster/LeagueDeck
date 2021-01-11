@@ -2,11 +2,11 @@
 
 namespace LeagueDeck
 {
-    public class LeagueDeckSettings
+    public class SpellTimerSettings
     {
-        public static LeagueDeckSettings CreateDefaultSettings()
+        public static SpellTimerSettings CreateDefaultSettings()
         {
-            return new LeagueDeckSettings
+            return new SpellTimerSettings
             {
                 SendMessageInChat = false,
                 ShowMinutesAndSeconds = false,

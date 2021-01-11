@@ -1,0 +1,34 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,minimal-ui,viewport-fit=cover">
+    <meta name=apple-mobile-web-app-capable content=yes>
+    <meta name=apple-mobile-web-app-status-bar-style content=black>
+    <title>LeagueDeck Settings</title>
+    <link rel="stylesheet" href="sdpi.css">
+    <script src="sdtools.common.js"></script>
+    <script src="BuyItem.js"></script>
+</head>
+<body>
+    <div class="sdpi-wrapper">
+        <div class="sdpi-item" id="dvItem">
+            <div class="sdpi-item-label">Item</div>
+            <select class="sdpi-item-value select sdProperty sdList" id="items" oninput="setSettings()" sdListTextProperty="Name" sdListValueProperty="Id" sdValueField="itemId"></select>
+        </div>
+
+        <div class="sdpi-item" id="dvDisplayFormat">
+            <div class="sdpi-item-label">Display</div>
+            <select class="sdpi-item-value select sdProperty" name="displayFormat" id="displayFormat" oninput="setSettings()">
+                <option value="0">None</option>
+                <option value="1">Remaining Cost</option>
+                <option value="2">Total Cost</option>
+            </select>
+        </div>
+
+        <div class="sdpi-item" id="dvDisplayFormat">
+            <h1 class="sdpi-item-value">DISCLAIMER: Buying items using this action is not possible yet. It will only show you when the specified item is purchasable.</h1>
+        </div>
+    </div>
+</body>
+</html>

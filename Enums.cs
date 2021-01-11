@@ -26,6 +26,13 @@ namespace LeagueDeck
         Summoner5 = 4,
     }
 
+    public enum EBuyItemDisplayFormat
+    {
+        None = 0,
+        RemainingCost = 1,
+        TotalCost = 2,
+    }
+
     public enum EEventType
     {
         GameStart,
@@ -41,5 +48,6 @@ namespace LeagueDeck
         TurretKilled,
         InhibKilled,
 		InhibRespawningSoon,
+        InhibRespawned,
     }
 }

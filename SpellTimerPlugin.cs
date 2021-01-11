@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace LeagueDeck
 {
     [PluginActionId("dev.timeblaster.leaguedeck.spelltimer")]
-    public class LeagueDeckPlugin : PluginBase
+    public class SpellTimerPlugin : PluginBase
     {
         #region vars
 
@@ -17,7 +17,7 @@ namespace LeagueDeck
 
         private CancellationTokenSource _cts = new CancellationTokenSource();
 
-        private LeagueDeckSettings _settings;
+        private SpellTimerSettings _settings;
 
         private LeagueInfo _info;
         private bool _isInGame;
@@ -32,7 +32,7 @@ namespace LeagueDeck
 
         #region ctor
 
-        public LeagueDeckPlugin(SDConnection connection, InitialPayload payload)
+        public SpellTimerPlugin(SDConnection connection, InitialPayload payload)
             : base(connection, payload)
         {
             Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Constructor called");
@@ -47,11 +47,11 @@ namespace LeagueDeck
             Connection.OnApplicationDidTerminate += Connection_OnApplicationDidTerminate;
 
             if (payload.Settings == null || payload.Settings.Count == 0)
-                this._settings = LeagueDeckSettings.CreateDefaultSettings();
+                this._settings = SpellTimerSettings.CreateDefaultSettings();
             else
-                this._settings = payload.Settings.ToObject<LeagueDeckSettings>();
+                this._settings = payload.Settings.ToObject<SpellTimerSettings>();
 
-            if(_info.UpdateTask != null)
+            if (_info.UpdateTask != null)
             {
                 Task.Run(async () =>
                 {

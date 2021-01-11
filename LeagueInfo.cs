@@ -1,4 +1,5 @@
 using BarRaider.SdTools;
+using LeagueDeck.ApiResponse;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -8,6 +9,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -53,14 +55,17 @@ namespace LeagueDeck
         private const string cSummonerSpellDataUrl = "https://ddragon.bangingheads.net/cdn/{0}/data/en_US/summoner.json";
         private const string cSpellImageUrl = "https://ddragon.bangingheads.net/cdn/{0}/img/spell/{1}.png";
         private const string cItemDataUrl = "https://ddragon.bangingheads.net/cdn/{0}/data/en_US/item.json";
+        private const string cItemImageUrl = "https://ddragon.bangingheads.net/cdn/{0}/img/item/{1}.png";
 
         private readonly string _championImageFolder = Path.Combine(Environment.CurrentDirectory, "Images", "Champions");
         private readonly string _spellImageFolder = Path.Combine(Environment.CurrentDirectory, "Images", "Spells");
         private readonly string _summonerSpellImageFolder = Path.Combine(Environment.CurrentDirectory, "Images", "SummonerSpells");
+        private readonly string _itemImageFolder = Path.Combine(Environment.CurrentDirectory, "Images", "Items");
         private readonly string _leagueDataFolder = Path.Combine(Environment.CurrentDirectory, "LeagueData");
         private readonly string _missingChampionImageId = "MissingChampion";
         private readonly string _missingSpellImageId = "MissingSpell";
         private readonly string _missingSummonerSpellImageId = "MissingSummonerSpell";
+        private readonly string _missingItemImageId = "MissingItem";
 
         private Dictionary<ESummoner, Dictionary<ESpell, Spell>> SummonerToSpells = new Dictionary<ESummoner, Dictionary<ESpell, Spell>>();
         private Dictionary<ESummoner, Champion> SummonerToChampion = new Dictionary<ESummoner, Champion>();
@@ -69,6 +74,9 @@ namespace LeagueDeck
         public Task UpdateTask { get; private set; }
         public Task LoadGameDataTask { get; private set; }
 
+        public List<Champion> GetChampions() => _data.Champions;
+        public List<Spell> GetSummonerSpells() => _data.SummonerSpells;
+        public List<Item> GetItems() => _data.Items;
 
         #endregion
 
@@ -76,12 +84,10 @@ namespace LeagueDeck
 
         private LeagueInfo(CancellationToken ct)
         {
-            Logger.Instance.LogMessage(TracingLevel.DEBUG, "LeagueInfo - Constructor");
-
-            OnUpdateStarted?.Invoke(this, new UpdateEventArgs(0));
-
             UpdateTask = Task.Run(async () =>
             {
+                OnUpdateStarted?.Invoke(this, new UpdateEventArgs(0));
+
                 var version = await GetLatestVersion(ct);
 
                 Directory.CreateDirectory(_leagueDataFolder);
@@ -91,14 +97,28 @@ namespace LeagueDeck
                 {
                     var json = File.ReadAllText(path);
                     _data = JsonConvert.DeserializeObject<LeagueData>(json);
+
+                    if (_data.LeagueDeckVersion == null || _data.LeagueDeckVersion < GetLeagueDeckVersion())
+                    {
+                        Logger.Instance.LogMessage(TracingLevel.DEBUG, "LeagueDeckVersionUpdated");
+                        await UpdateData(version, path, ct).ContinueWith(x => OnUpdateCompleted?.Invoke(this, new UpdateEventArgs(1)));
+                    }
                 }
                 else
                 {
-                    await UpdateData(version, path, ct);
+                    await UpdateData(version, path, ct).ContinueWith(x => OnUpdateCompleted?.Invoke(this, new UpdateEventArgs(1)));
                 }
 
-                OnUpdateCompleted?.Invoke(this, new UpdateEventArgs(1));
             });
+
+            Logger.Instance.LogMessage(TracingLevel.DEBUG, "LeagueInfo - Constructor");
+        }
+
+        private Version GetLeagueDeckVersion()
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            var fvi = FileVersionInfo.GetVersionInfo(assembly.Location);
+            return new Version(fvi.FileVersion);
         }
 
         #endregion
@@ -121,10 +141,10 @@ namespace LeagueDeck
                 {
                     await UpdateTask;
 
-                    Debug.WriteLine("Loading Game Data -  initiated");
+                    Logger.Instance.LogMessage(TracingLevel.DEBUG, "Loading Game Data -  initiated");
 
                     var participants = await GetParticipants(ct);
-                    var activePlayerName = await GetActivePlayer(ct);
+                    var activePlayerName = await GetActivePlayerName(ct);
 
                     var activePlayer = participants.FirstOrDefault(x => x.SummonerName == activePlayerName);
                     if (activePlayer == null)
@@ -178,7 +198,7 @@ namespace LeagueDeck
                         SummonerToSpells[(ESummoner)i] = spellDict;
                     }
 
-                    Debug.WriteLine("Loading Game Data - completed");
+                    Logger.Instance.LogMessage(TracingLevel.DEBUG, "Loading Game Data - completed");
                 });
             }
 
@@ -187,13 +207,17 @@ namespace LeagueDeck
 
         public void ClearGameData()
         {
-            LoadGameDataTask = null;
-            SummonerToChampion.Clear();
-            SummonerToSpells.Clear();
-            IdToImage.Clear();
+            if (LoadGameDataTask != null)
+            {
+                LoadGameDataTask = null;
+                _activePlayerName = null;
+                SummonerToChampion.Clear();
+                SummonerToSpells.Clear();
+                IdToImage.Clear();
+            }
         }
 
-        public double GetSpellCooldown(Spell spell, SummonerData participant)
+        public double GetSpellCooldown(Spell spell, Summoner participant)
         {
             // assuming the player always levels when possible
             // TODO: check for special level behaviour(Elise, Jayce, Karma, ...)
@@ -223,7 +247,7 @@ namespace LeagueDeck
             return cooldown / (1 + (abilityHaste / 100));
         }
 
-        public double GetUltimateCooldown(Spell spell, SummonerData participant, int cloudDrakes = 0)
+        public double GetUltimateCooldown(Spell spell, Summoner participant, int cloudDrakes = 0)
         {
             // assuming the player always levels when possible
             // TODO: check for special level behaviour(Elise, Jayce, Karma, ...)
@@ -250,7 +274,7 @@ namespace LeagueDeck
             return cooldown / (1 + (abilityHaste / 100));
         }
 
-        public double GetSummonerSpellCooldown(Spell spell, SummonerData participant, bool isAram)
+        public double GetSummonerSpellCooldown(Spell spell, Summoner participant, bool isAram)
         {
             double cooldown;
             // SummonerSpellData contains no info about tp cooldown
@@ -273,7 +297,18 @@ namespace LeagueDeck
             return cooldown / (1 + (summonerSpellHaste / 100));
         }
 
-        public async Task<List<SummonerData>> GetEnemies(CancellationToken ct)
+        public async Task<Summoner> GetSummoner(string name, CancellationToken ct)
+        {
+            var participants = await GetParticipants(ct);
+            if (participants == null)
+                return null;
+
+            var summoner = participants.FirstOrDefault(x => x.SummonerName == name);
+
+            return summoner;
+        }
+
+        public async Task<List<Summoner>> GetEnemies(CancellationToken ct)
         {
             Logger.Instance.LogMessage(TracingLevel.DEBUG, "GetEnemies - initiated");
 
@@ -281,7 +316,7 @@ namespace LeagueDeck
             if (participants == null)
                 return null;
 
-            var activePlayerName = await GetActivePlayer(ct);
+            var activePlayerName = await GetActivePlayerName(ct);
 
             var activePlayer = participants.FirstOrDefault(x => x.SummonerName == activePlayerName);
             if (activePlayer == null)
@@ -297,21 +332,54 @@ namespace LeagueDeck
 
         public async Task<GameData> GetGameData(CancellationToken ct)
         {
-            var url = cInGameApiBaseUrl + "/gamestats";
-            var response = await Utilities.GetApiResponse(url, ct);
-            var gameData = JsonConvert.DeserializeObject<GameData>(response);
+            try
+            {
+                var url = cInGameApiBaseUrl + "/gamestats";
+                var response = await Utilities.GetApiResponse(url, ct);
+                var gameData = JsonConvert.DeserializeObject<GameData>(response);
 
-            return gameData;
+                return gameData;
+            }
+            catch (Exception e)
+            {
+                Logger.Instance.LogMessage(TracingLevel.DEBUG, "GetGameData - failed to get data:\n" + e.Message);
+                return null;
+            }
         }
 
         public async Task<List<GameEvent>> GetEventData(CancellationToken ct)
         {
-            var url = cInGameApiBaseUrl + "/eventdata";
-            var response = await Utilities.GetApiResponse(url, ct);
-            var eventData = JsonConvert.DeserializeObject<JObject>(response);
-            var events = eventData["Events"].ToObject<List<GameEvent>>();
+            try
+            {
+                var url = cInGameApiBaseUrl + "/eventdata";
+                var response = await Utilities.GetApiResponse(url, ct);
+                var eventData = JsonConvert.DeserializeObject<JObject>(response);
+                var events = eventData["Events"].ToObject<List<GameEvent>>();
 
-            return events;
+                return events;
+            }
+            catch (Exception e)
+            {
+                Logger.Instance.LogMessage(TracingLevel.DEBUG, "GetEventData - failed to get data:\n" + e.Message);
+                return null;
+            }
+        }
+
+        public async Task<ActivePlayer> GetActivePlayer(CancellationToken ct)
+        {
+            try
+            {
+                var url = cInGameApiBaseUrl + "/activeplayer";
+                var response = await Utilities.GetApiResponse(url, ct);
+                var activePlayer = JsonConvert.DeserializeObject<ActivePlayer>(response);
+
+                return activePlayer;
+            }
+            catch(Exception e)
+            {
+                Logger.Instance.LogMessage(TracingLevel.DEBUG, "GetActivePlayer - failed to get data:\n" + e.Message);
+                return null;
+            }
         }
 
         public Champion GetChampion(string championName)
@@ -447,6 +515,30 @@ namespace LeagueDeck
             return item;
         }
 
+        public Image GetItemImage(int itemId)
+        {
+            string id = itemId.ToString();
+            if (itemId == -1)
+                id = _missingItemImageId;
+
+            if (!IdToImage.TryGetValue(id, out var image))
+            {
+                var path = Path.Combine(_itemImageFolder, $"{id}.png");
+
+                if (!File.Exists(path))
+                {
+                    Logger.Instance.LogMessage(TracingLevel.ERROR, $"GetItemImage - file not found: {path}");
+                    id = _missingItemImageId;
+                    path = Path.Combine(_itemImageFolder, $"{id}.png");
+                }
+
+                image = Image.FromFile(path);
+                IdToImage[id] = image;
+            }
+
+            return image;
+        }
+
         #endregion
 
         #region Private Methods
@@ -458,6 +550,11 @@ namespace LeagueDeck
             var champions = await GetChampions(ct);
             var summonerSpells = await GetSummonerSpells(ct);
             var items = await GetItems(ct);
+
+            Directory.CreateDirectory(_championImageFolder);
+            Directory.CreateDirectory(_spellImageFolder);
+            Directory.CreateDirectory(_summonerSpellImageFolder);
+            Directory.CreateDirectory(_itemImageFolder);
 
             using (var wc = new WebClient())
             {
@@ -490,10 +587,23 @@ namespace LeagueDeck
                     _progress++;
                     OnUpdateProgress?.Invoke(this, new UpdateEventArgs((int)((double)_progress / _total * 100)));
                 }
+
+                foreach (var item in items)
+                {
+                    var url = string.Format(cItemImageUrl, version, item.Id);
+                    var imgPath = Path.Combine(_itemImageFolder, $"{item.Id}.png");
+                    await wc.DownloadFileTaskAsync(url, imgPath);
+
+                    _progress++;
+                    OnUpdateProgress?.Invoke(this, new UpdateEventArgs((int)((double)_progress / _total * 100)));
+                }
             }
+
+            var leagueDeckVersion = GetLeagueDeckVersion();
 
             _data = new LeagueData
             {
+                LeagueDeckVersion = leagueDeckVersion,
                 Champions = champions,
                 SummonerSpells = summonerSpells,
                 Items = items,
@@ -598,6 +708,10 @@ namespace LeagueDeck
             var data = items.GetValue("data", StringComparison.OrdinalIgnoreCase);
             var children = data.Children<JProperty>();
 
+            // 1 request:
+            // image
+            _total += children.Count();
+
             foreach (var child in children)
             {
                 if (!int.TryParse(child.Name, out int id))
@@ -606,6 +720,11 @@ namespace LeagueDeck
                 var item = child.First;
 
                 var name = item["name"].Value<string>();
+                var from = item["from"]?.Values<int>();
+
+                var gold = item["gold"];
+                var baseCost = gold["base"].Value<int>();
+                var totalCost = gold["total"].Value<int>();
 
                 var stats = item["stats"];
                 var modifier = stats.Cast<JProperty>().FirstOrDefault(x => x.Name == "AbilityHasteMod");
@@ -619,22 +738,25 @@ namespace LeagueDeck
                     Id = id,
                     Name = name,
                     AbilityHaste = abilityHaste,
+                    ComponentIds = from?.ToList() ?? new List<int>(),
+                    BaseCost = baseCost,
+                    TotalCost = totalCost,
                 });
             }
 
             return itemList;
         }
 
-        private async Task<List<SummonerData>> GetParticipants(CancellationToken ct)
+        private async Task<List<Summoner>> GetParticipants(CancellationToken ct)
         {
-            List<SummonerData> participants = null;
+            List<Summoner> participants = null;
             while (participants == null || participants.Count == 0)
             {
                 try
                 {
                     var url = cInGameApiBaseUrl + "/playerlist";
                     var json = await Utilities.GetApiResponse(url, ct);
-                    participants = JsonConvert.DeserializeObject<List<SummonerData>>(json);
+                    participants = JsonConvert.DeserializeObject<List<Summoner>>(json);
                 }
                 catch
                 {
@@ -645,7 +767,7 @@ namespace LeagueDeck
             return participants;
         }
 
-        private async Task<string> GetActivePlayer(CancellationToken ct)
+        private async Task<string> GetActivePlayerName(CancellationToken ct)
         {
             if (string.IsNullOrEmpty(_activePlayerName))
             {
