@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -76,7 +76,7 @@ namespace LeagueDeck
             InputSimulator iis = new InputSimulator();
 
             // open chat
-            iis.Keyboard.KeyDown(WindowsInput.Native.VirtualKeyCode.RETURN);
+            iis.Keyboard.KeyPress(WindowsInput.Native.VirtualKeyCode.RETURN);
 
             Thread.Sleep(20);
 
@@ -87,7 +87,7 @@ namespace LeagueDeck
             Thread.Sleep(20);
 
             // send message
-            iis.Keyboard.KeyDown(WindowsInput.Native.VirtualKeyCode.RETURN);
+            iis.Keyboard.KeyPress(WindowsInput.Native.VirtualKeyCode.RETURN);
 
             InputRunning = false;
         }
@@ -124,7 +124,6 @@ namespace LeagueDeck
             };
         }
 
-        #endregion
-    
+        #endregion    
     }
 }
