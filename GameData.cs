@@ -3,9 +3,9 @@ using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 
-namespace LeagueDeck
+namespace LeagueDeck.ApiResponse
 {
-    public class SummonerData
+    public class Summoner
     {
         [JsonProperty("summonerName")]
         public string SummonerName { get; set; }
@@ -32,10 +32,10 @@ namespace LeagueDeck
         public double RespawnTimer { get; set; }
 
         [JsonProperty("items")]
-        public IEnumerable<ItemData> Items { get; set; }
+        public IEnumerable<Item> Items { get; set; }
 
         [JsonProperty("summonerSpells")]
-        public SummonerSpellData SummonerSpells { get; set; }
+        public SummonerSpells SummonerSpells { get; set; }
 
         public string GetSummonerSpell(ESpell spell)
         {
@@ -53,7 +53,91 @@ namespace LeagueDeck
         }
     }
 
-    public class ItemData
+    public class ChampionStats
+    {
+        [JsonProperty("abilityPower")]
+        public double AbilityPower { get; set; }
+
+        [JsonProperty("armor")]
+        public double Armor{ get; set; }
+
+        [JsonProperty("armorPenetrationFlat")]
+        public double ArmorPenetrationFlat { get; set; }
+
+        [JsonProperty("armorPenetrationPercent")]
+        public double ArmorPenetrationPercent { get; set; }
+
+        [JsonProperty("attackDamage")]
+        public double AttackDamage { get; set; }
+
+        [JsonProperty("attackRange")]
+        public double AttackRange { get; set; }
+
+        [JsonProperty("attackSpeed")]
+        public double AttackSpeed { get; set; }
+
+        [JsonProperty("bonusArmorPenetrationPercent")]
+        public double BonusArmorPenetrationPercent { get; set; }
+
+        [JsonProperty("bonusMagicPenetrationPercent")]
+        public double BonusMagicPenetrationPercent { get; set; }
+
+        [JsonProperty("cooldownReduction")]
+        public double CooldownReduction { get; set; }
+
+        [JsonProperty("critChance")]
+        public double CritChance { get; set; }
+
+        [JsonProperty("critDamage")]
+        public double CritDamage { get; set; }
+
+        [JsonProperty("currentHealth")]
+        public double CurrentHealth { get; set; }
+
+        [JsonProperty("healthRegenRate")]
+        public double HealthRegenRate { get; set; }
+
+        [JsonProperty("lifeSteal")]
+        public double LifeSteal { get; set; }
+
+        [JsonProperty("magicLethality")]
+        public double MagicLethality { get; set; }
+
+        [JsonProperty("magicPenetrationFlat")]
+        public double MagicPenetrationFlat { get; set; }
+
+        [JsonProperty("magicPenetrationPercent")]
+        public double MagicPenetrationPercent { get; set; }
+
+        [JsonProperty("magicResist")]
+        public double MagicResist { get; set; }
+
+        [JsonProperty("maxHealth")]
+        public double MaxHealth { get; set; }
+
+        [JsonProperty("moveSpeed")]
+        public double MoveSpeed { get; set; }
+
+        [JsonProperty("physicalLethality")]
+        public double PhysicalLethality { get; set; }
+
+        [JsonProperty("resourceMax")]
+        public double ResourceMax { get; set; }
+
+        [JsonProperty("resourceRegenRate")]
+        public double ResourceRegenRate { get; set; }
+
+        [JsonProperty("resourceValue")]
+        public double ResourceValue { get; set; }
+
+        [JsonProperty("spellVamp")]
+        public double SpellVamp { get; set; }
+
+        [JsonProperty("tenacity")]
+        public double Tenacity { get; set; }
+    }
+
+    public class Item
     {
         [JsonProperty("itemID")]
         public int Id { get; set; }
@@ -77,16 +161,37 @@ namespace LeagueDeck
         public bool IsConsumable { get; set; }
     }
 
-    public class RuneData
+    public class Runes
+    {
+        [JsonProperty("generalRunes")]
+        public List<Rune> General { get; set; }
+
+        [JsonProperty("keystone")]
+        public Rune Keystone { get; set; }
+
+        [JsonProperty("primaryRuneTree")]
+        public Rune PrimaryRuneTree { get; set; }
+
+        [JsonProperty("secondaryRuneTree")]
+        public Rune SecondaryRuneTree { get; set; }
+    }
+
+    public class Rune
     {
         [JsonProperty("id")]
         public int Id { get; set; }
 
         [JsonProperty("displayName")]
         public string Name { get; set; }
+
+        [JsonProperty("rawDescription")]
+        public string RawDescription { get; set; }
+
+        [JsonProperty("rawDisplayName")]
+        public string RawDisplayName { get; set; }
     }
 
-    public class SummonerSpellData
+    public class SummonerSpells
     {
         [JsonProperty("summonerSpellOne")]
         public SummonerSpell Spell1 { get; set; }
@@ -95,15 +200,48 @@ namespace LeagueDeck
         public SummonerSpell Spell2 { get; set; }
     }
 
-    public class SummonerSpell
+    public abstract class BaseSpell
     {
-        public string Id => RawDisplayName.Replace("GeneratedTip_SummonerSpell_", string.Empty).Replace("_DisplayName", string.Empty);
-
         [JsonProperty("displayName")]
         public string LocalizedName { get; set; }
 
+        [JsonProperty("rawDescription")]
+        public string RawDescription { get; set; }
+
         [JsonProperty("rawDisplayName")]
         public string RawDisplayName { get; set; }
+    }
+
+    public class SummonerSpell : BaseSpell
+    {
+        public string Id => RawDisplayName.Replace("GeneratedTip_SummonerSpell_", string.Empty).Replace("_DisplayName", string.Empty);
+    }
+
+    public class Ability : BaseSpell
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("abilityLevel")]
+        public string Level { get; set; }
+    }
+
+    public class Abilities
+    {
+        [JsonProperty("Passive")]
+        public Ability Passive { get; set; }
+
+        [JsonProperty("Q")]
+        public Ability Q { get; set; }
+
+        [JsonProperty("W")]
+        public Ability W { get; set; }
+
+        [JsonProperty("E")]
+        public Ability E { get; set; }
+
+        [JsonProperty("R")]
+        public Ability R { get; set; }
     }
 
     public class GameData
@@ -165,5 +303,26 @@ namespace LeagueDeck
 
         [JsonProperty("TurretKilled")]
         public string TurretKilled { get; set; }
+    }
+
+    public class ActivePlayer
+    {
+        [JsonProperty("abilities")]
+        public Abilities Abilities { get; set; }
+
+        [JsonProperty("championStats")]
+        public ChampionStats Stats { get; set; }
+
+        [JsonProperty("currentGold")]
+        public double CurrentGold { get; set; }
+
+        [JsonProperty("fullRunes")]
+        public Runes Runes { get; set; }
+
+        [JsonProperty("level")]
+        public int Level { get; set; }
+
+        [JsonProperty("summonerName")]
+        public string Name { get; set; }
     }
 }

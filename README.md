@@ -1,3 +1,4 @@
+
 # LeagueDeck
 
 LeagueDeck is a plugin for the Stream Deck that provides tools to help you keep track of your game and enables you to predict your enemies more accurately.
@@ -26,6 +27,13 @@ You can enable automatic chat messages that display the accurate time when the s
 
 Single press: Starts the timer or sends a chat message if already started.\
 Long press: Resets the timer.
+
+### Buy Item
+
+##### DISCLAIMER: Buying items using this action is not possible yet. It will only show you when the specified item is purchasable.
+
+Drag the action into your Stream Deck and select the item you want to be displayed.\
+Every second it will check your inventory and current gold and updates the remaining cost of the item.
 
 ## Contributing
 If you found a bug or have a feature request, feel free to open an issue. :)

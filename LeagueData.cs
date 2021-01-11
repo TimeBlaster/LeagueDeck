@@ -1,9 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using System;
+using System.Collections.Generic;
 
 namespace LeagueDeck
 {
     public class LeagueData
     {
+        [JsonConverter(typeof(VersionConverter))]
+        public Version LeagueDeckVersion { get; set; }
+
         public List<Champion> Champions { get; set; }
         public List<Spell> SummonerSpells { get; set; }
         public List<Item> Items { get; set; }
@@ -51,10 +57,13 @@ namespace LeagueDeck
         public int Id { get; set; }
         public string Name { get; set; }
         public double AbilityHaste { get; set; }
+        public int BaseCost { get; set; }
+        public int TotalCost { get; set; }
+        public List<int> ComponentIds { get; set; }
 
         public static Item Default = new Item
         {
-            Id = 0,
+            Id = -1,
             Name = "???",
             AbilityHaste = 0,
         };

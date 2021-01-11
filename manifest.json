@@ -7,13 +7,28 @@
         {
           "Image": "Images/Plugin/waitingForGameStartTimer",
           "TitleAlignment": "middle",
-          "FontSize": "12"
+          "FontSize": "14"
         }
       ],
       "SupportedInMultiActions": false,
       "Tooltip": "Automagically loads the enemy's spell from selected player into your StreamDeck so you will always know when to predict the enemy",
       "UUID": "dev.timeblaster.leaguedeck.spelltimer",
       "PropertyInspectorPath": "PropertyInspector/SpellTimer.html"
+    },
+    {
+      "Icon": "Images/Plugin/buyItem",
+      "Name": "Buy Item",
+      "States": [
+        {
+          "Image": "Images/Plugin/waitingForItemSelection",
+          "TitleAlignment": "middle",
+          "FontSize": "14"
+        }
+      ],
+      "SupportedInMultiActions": false,
+      "Tooltip": "Displays when the selected item is purchasable and buys it on activation.",
+      "UUID": "dev.timeblaster.leaguedeck.buyitem",
+      "PropertyInspectorPath": "PropertyInspector/BuyItem.html"
     }
   ],
   "Author": "TimeBlaster",
@@ -21,7 +36,7 @@
   "Description": "Provides tools for League of Legends to help you keep track of the game.",
   "Icon": "Images/Plugin/pluginIcon",
   "URL": "https://github.com/TimeBlaster/LeagueDeck",
-  "Version": "2.4.1",
+  "Version": "2.5",
   "CodePath": "dev.timeblaster.leaguedeck",
   "Category": "LeagueDeck",
   "CategoryIcon": "Images/Plugin/categoryIcon",

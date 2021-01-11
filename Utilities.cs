@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -23,8 +23,10 @@ namespace LeagueDeck
             });
 
         private const string cUpdateImageName = "updating@2x.png";
+        private const string cCheckMarkImageName = "check@2x.png";
         private static readonly string _pluginImageFolder = Path.Combine(Environment.CurrentDirectory, "Images", "Plugin");
         private static Image _updateImage;
+        private static Image _checkMarkImage;
 
         public static bool InputRunning { get; private set; }
 
@@ -42,6 +44,16 @@ namespace LeagueDeck
                 return (Image)_updateImage.Clone();
             }
         }
+
+        public static Image GetCheckMarkImage()
+        {
+            if (_checkMarkImage == null)
+                _checkMarkImage = Image.FromFile(Path.Combine(_pluginImageFolder, cCheckMarkImageName));
+
+            lock (_checkMarkImage)
+            {
+                return (Image)_checkMarkImage.Clone();
+            }
         }
 
         public static Image AddChampionToSpellImage(Image spellImage, Image championImage)
@@ -52,6 +64,20 @@ namespace LeagueDeck
             {
                 var bounds = new Rectangle(0, 0, 32, 32);
                 g.DrawImage(championImage, bounds);
+            }
+
+            return image;
+        }
+
+        public static Image AddCheckMarkToImage(Image source)
+        {
+            Bitmap image = (Bitmap)source.Clone();
+
+            using (var g = Graphics.FromImage(image))
+            {
+                var bounds = new Rectangle(0, 0, source.Width, source.Height);
+                var check = GetCheckMarkImage();
+                g.DrawImage(check, bounds);
             }
 
             return image;
