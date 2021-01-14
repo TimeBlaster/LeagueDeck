@@ -15,7 +15,7 @@ LeagueDeck is a plugin for the Stream Deck that provides tools to help you keep 
 To install this plugin, head over to [releases](https://github.com/TimeBlaster/LeagueDeck/releases) and download the latest version.\
 After the download finished just open the file and LeagueDeck should show up in your Stream Deck App.
 
-You can also download it directly from within the Stream Deck Application by clicking on 'More Actions...' and searching for 'LeagueDeck' (
+You can also download it directly from within the Stream Deck Application by clicking on 'More Actions...' and searching for 'LeagueDeck'.
 
 ## Usage
 
