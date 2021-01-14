@@ -5,7 +5,7 @@ LeagueDeck is a plugin for the Stream Deck that provides tools to help you keep 
 
 ## Version 2.0 released!
 - Sending a chat message no longer requires you to press 'Escape'
-- Now downloads all required assets (Champion and Spell Data/Images) when a new version comes out. Download time: ~10 minutes.
+- Now downloads all required assets (Champion-, Item- and Spell- Info/Images) when a new version comes out. Download time: ~10 minutes.
 - Added support for basic abilities and ultimates.
 - You can now set an offset to lower the starting cooldown. Useful when you don't press the key immediately.
 - No longer requires you to install a root certificate from Riot Games to use the API.
@@ -14,6 +14,8 @@ LeagueDeck is a plugin for the Stream Deck that provides tools to help you keep 
 
 To install this plugin, head over to [releases](https://github.com/TimeBlaster/LeagueDeck/releases) and download the latest version.\
 After the download finished just open the file and LeagueDeck should show up in your Stream Deck App.
+
+You can also download it directly from within the Stream Deck Application by clicking on 'More Actions...' and searching for 'LeagueDeck' (
 
 ## Usage
 
