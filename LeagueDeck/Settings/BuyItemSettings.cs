@@ -1,7 +1,8 @@
-﻿using Newtonsoft.Json;
+﻿using LeagueDeck.Models;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 
-namespace LeagueDeck
+namespace LeagueDeck.Settings
 {
     public class BuyItemSettings
     {
@@ -10,18 +11,25 @@ namespace LeagueDeck
             return new BuyItemSettings
             {
                 Items = new List<Item>(),
-                ItemId = -1,
+                ItemId = string.Empty,
                 DisplayFormat = EBuyItemDisplayFormat.None,
             };
         }
 
         [JsonProperty(PropertyName = "items")]
-        public List<Item> Items { get; set; }
+        public IReadOnlyList<Item> Items { get; set; }
 
         [JsonProperty(PropertyName = "itemId")]
-        public int ItemId { get; set; }
+        public string ItemId { get; set; }
 
         [JsonProperty(PropertyName = "displayFormat")]
         public EBuyItemDisplayFormat DisplayFormat { get; set; }
+    }
+
+    public enum EBuyItemDisplayFormat
+    {
+        None = 0,
+        RemainingCost = 1,
+        TotalCost = 2,
     }
 }

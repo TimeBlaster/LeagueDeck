@@ -1,4 +1,7 @@
 ﻿using BarRaider.SdTools;
+using LeagueDeck.Core;
+using LeagueDeck.Models;
+using LeagueDeck.Settings;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Drawing;
@@ -9,9 +12,12 @@ using System.Threading.Tasks;
 namespace LeagueDeck
 {
     [PluginActionId("dev.timeblaster.leaguedeck.spelltimer")]
-    public class SpellTimerPlugin : PluginBase
+    public class SpellTimerAction : PluginBase
     {
         #region vars
+
+        private const string cAram = "ARAM";
+        private const string cCloudDrake = "Air";
 
         private const int cResetTimerKeypressLength = 500;
 
@@ -19,7 +25,7 @@ namespace LeagueDeck
 
         private SpellTimerSettings _settings;
 
-        private LeagueInfo _info;
+        private LeagueDeckData _info;
         private bool _isInGame;
 
         private DateTime _keyPressStart;
@@ -28,20 +34,36 @@ namespace LeagueDeck
         private bool _longPress = false;
         private bool _timerEnabled;
 
+        private Player _player;
+        private Player Player
+        {
+            get => _player; 
+            set
+            {
+                if(_player != value)
+                {
+                    _player = value;
+                    UpdateSpellImage();
+                }
+            }
+        }
+
+
         #endregion
 
         #region ctor
 
-        public SpellTimerPlugin(SDConnection connection, InitialPayload payload)
+        public SpellTimerAction(SDConnection connection, InitialPayload payload)
             : base(connection, payload)
         {
             Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Constructor called");
 
-            LeagueInfo.OnUpdateStarted += LeagueInfo_OnUpdateStarted;
-            LeagueInfo.OnUpdateProgress += LeagueInfo_OnUpdateProgress;
-            LeagueInfo.OnUpdateCompleted += LeagueInfo_OnUpdateCompleted;
+            var updateProgressReporter = UpdateProgressReporter.GetInstance();
+            updateProgressReporter.OnUpdateStarted += LeagueInfo_OnUpdateStarted;
+            updateProgressReporter.OnUpdateProgress += LeagueInfo_OnUpdateProgress;
+            updateProgressReporter.OnUpdateCompleted += LeagueInfo_OnUpdateCompleted;
 
-            _info = LeagueInfo.GetInstance(_cts.Token);
+            _info = LeagueDeckData.GetInstance(_cts.Token);
 
             Connection.OnApplicationDidLaunch += Connection_OnApplicationDidLaunch;
             Connection.OnApplicationDidTerminate += Connection_OnApplicationDidTerminate;
@@ -72,7 +94,7 @@ namespace LeagueDeck
 
         private async void Connection_OnApplicationDidLaunch(object sender, BarRaider.SdTools.Wrappers.SDEventReceivedEventArgs<BarRaider.SdTools.Events.ApplicationDidLaunch> e)
         {
-            if (e.Event.Payload.Application != "League of Legends.exe")
+            if (e.Event.Payload.Application != Utilities.cLeagueOfLegendsProcessName)
                 return;
 
             Logger.Instance.LogMessage(TracingLevel.DEBUG, "GameStarted");
@@ -87,7 +109,7 @@ namespace LeagueDeck
 
         private async void Connection_OnApplicationDidTerminate(object sender, BarRaider.SdTools.Wrappers.SDEventReceivedEventArgs<BarRaider.SdTools.Events.ApplicationDidTerminate> e)
         {
-            if (e.Event.Payload.Application != "League of Legends.exe")
+            if (e.Event.Payload.Application != Utilities.cLeagueOfLegendsProcessName)
                 return;
 
             _isInGame = false;
@@ -102,18 +124,18 @@ namespace LeagueDeck
             await Connection.SetDefaultImageAsync();
         }
 
-        private async void LeagueInfo_OnUpdateStarted(object sender, LeagueInfo.UpdateEventArgs e)
+        private async void LeagueInfo_OnUpdateStarted(object sender, ProgressEventArgs e)
         {
             var image = Utilities.GetUpdateImage();
             await Connection.SetImageAsync(image);
         }
 
-        private async void LeagueInfo_OnUpdateProgress(object sender, LeagueInfo.UpdateEventArgs e)
+        private async void LeagueInfo_OnUpdateProgress(object sender, ProgressEventArgs e)
         {
-            await Connection.SetTitleAsync($"{e.Progress}%");
+            await Connection.SetTitleAsync($"{(int)e.Percentage}%");
         }
 
-        private async void LeagueInfo_OnUpdateCompleted(object sender, LeagueInfo.UpdateEventArgs e)
+        private async void LeagueInfo_OnUpdateCompleted(object sender, ProgressEventArgs e)
         {
             await Connection.SetDefaultImageAsync();
             await Connection.SetTitleAsync(string.Empty);
@@ -134,14 +156,28 @@ namespace LeagueDeck
             if (_timerEnabled)
                 return;
 
-            var enemies = await _info.GetEnemies(_cts.Token);
+            var enemies = await ApiController.GetEnemies(_cts.Token);
             if (enemies == null || enemies.Count - 1 < (int)_settings.Summoner)
                 return;
 
-            var participant = enemies[(int)_settings.Summoner];
+            var participant = enemies.ElementAtOrDefault((int)_settings.Summoner);
+            if (participant == null)
+                return;
 
-            var champion = _info.GetChampion(participant.ChampionName);
-            var spell = _info.GetSpell(_settings.Summoner, _settings.Spell);
+            var champion = _info.ChampionAssetController.GetAsset(participant.ChampionName);
+            if (!_info.SummonerNameToPlayer.TryGetValue(participant.SummonerName, out var player))
+            {
+                // TODO log
+                return;
+            }
+
+            Player = player;
+
+            if (!Player.ESpellToSpell.TryGetValue(_settings.Spell, out var spell))
+            {
+                // TODO log
+                return;
+            }
 
             double cooldown;
             switch (_settings.Spell)
@@ -153,10 +189,10 @@ namespace LeagueDeck
                     break;
 
                 case ESpell.R:
-                    var events = await _info.GetEventData(_cts.Token);
+                    var events = await ApiController.GetEventData(_cts.Token);
                     var enemySummonerNames = enemies.Select(y => y.SummonerName);
                     var cloudDrakes = events
-                        .Where(x => x.Type == EEventType.DragonKill && x.DragonType == "Air")
+                        .Where(x => x.Type == Models.Api.EEventType.DragonKill && x.DragonType == cCloudDrake)
                         .Count(x => enemySummonerNames.Contains(x.KillerName));
 
                     cooldown = _info.GetUltimateCooldown(spell, participant, cloudDrakes);
@@ -164,8 +200,8 @@ namespace LeagueDeck
 
                 case ESpell.SummonerSpell1:
                 case ESpell.SummonerSpell2:
-                    var gameData = await _info.GetGameData(_cts.Token);
-                    var isAram = gameData.GameMode.Equals("ARAM");
+                    var gameData = await ApiController.GetGameData(_cts.Token);
+                    var isAram = gameData.GameMode.Equals(cAram);
 
                     cooldown = _info.GetSummonerSpellCooldown(spell, participant, isAram);
                     break;
@@ -181,8 +217,9 @@ namespace LeagueDeck
             _timerEnabled = true;
 
             _endTime = _keyPressStart.AddSeconds(cooldown - _settings.Offset);
+            player.SpellToTimerEnd[_settings.Spell] = _endTime;
 
-            await UpdateSpellImage(spell, champion, true);
+            await UpdateSpellImage(spell, champion);
         }
 
         public async override void KeyReleased(KeyPayload payload)
@@ -218,6 +255,28 @@ namespace LeagueDeck
                 }
             }
 
+            var enemies = await ApiController.GetEnemies(_cts.Token);
+            if (enemies == null || enemies.Count - 1 < (int)_settings.Summoner)
+                return;
+
+            var participant = enemies.ElementAtOrDefault((int)_settings.Summoner);
+            if (participant == null)
+                return;
+
+            if (!_info.SummonerNameToPlayer.TryGetValue(participant.SummonerName, out var player))
+            {
+                // TODO log
+                return;
+            }
+
+            Player = player;
+
+            if (!player.ESpellToSpell.TryGetValue(_settings.Spell, out var spell))
+            {
+                // TODO log
+                return;
+            }
+
             await CheckIfResetNeeded();
         }
 
@@ -238,9 +297,10 @@ namespace LeagueDeck
         {
             Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Destructor called");
 
-            LeagueInfo.OnUpdateStarted -= LeagueInfo_OnUpdateStarted;
-            LeagueInfo.OnUpdateProgress -= LeagueInfo_OnUpdateProgress;
-            LeagueInfo.OnUpdateCompleted -= LeagueInfo_OnUpdateCompleted;
+            var updateProgressReporter = UpdateProgressReporter.GetInstance();
+            updateProgressReporter.OnUpdateStarted -= LeagueInfo_OnUpdateStarted;
+            updateProgressReporter.OnUpdateProgress -= LeagueInfo_OnUpdateProgress;
+            updateProgressReporter.OnUpdateCompleted -= LeagueInfo_OnUpdateCompleted;
 
             Connection.OnApplicationDidLaunch -= Connection_OnApplicationDidLaunch;
             Connection.OnApplicationDidTerminate -= Connection_OnApplicationDidTerminate;
@@ -255,13 +315,33 @@ namespace LeagueDeck
 
         private async Task UpdateSpellImage()
         {
-            var spell = _info.GetSpell(_settings.Summoner, _settings.Spell);
-            var champion = _info.GetChampion(_settings.Summoner);
+            var enemies = await ApiController.GetEnemies(_cts.Token);
+            if (enemies == null || enemies.Count - 1 < (int)_settings.Summoner)
+                return;
+
+            var participant = enemies.ElementAtOrDefault((int)_settings.Summoner);
+            if (participant == null)
+                return;
+
+            var champion = _info.ChampionAssetController.GetAsset(participant.ChampionName);
+            if (!_info.SummonerNameToPlayer.TryGetValue(participant.SummonerName, out var player))
+            {
+                // TODO log
+                return;
+            }
+
+            Player = player;
+
+            if (!player.ESpellToSpell.TryGetValue(_settings.Spell, out var spell))
+            {
+                // TODO log
+                return;
+            }
 
             await UpdateSpellImage(spell, champion);
         }
 
-        private async Task UpdateSpellImage(Spell spell, Champion champion, bool grayscaled = false)
+        private async Task UpdateSpellImage(Spell spell, Champion champion)
         {
             Logger.Instance.LogMessage(TracingLevel.DEBUG, "Spell Image Update - initiated");
 
@@ -278,12 +358,12 @@ namespace LeagueDeck
                 case ESpell.W:
                 case ESpell.E:
                 case ESpell.R:
-                    spellImage = _info.GetSpellImage(spell?.Id);
+                    spellImage = _info.SpellAssetController.GetImage(spell?.Id);
                     break;
 
                 case ESpell.SummonerSpell1:
                 case ESpell.SummonerSpell2:
-                    spellImage = _info.GetSummonerSpellImage(spell?.Id);
+                    spellImage = _info.SummonerSpellAssetController.GetImage(spell?.Id);
                     break;
 
                 default:
@@ -291,10 +371,10 @@ namespace LeagueDeck
                     throw new ArgumentOutOfRangeException(nameof(_settings.Spell));
             }
 
-            if (grayscaled)
+            if (_timerEnabled)
                 spellImage = Utilities.GrayscaleImage(spellImage);
 
-            var championImage = _info.GetChampionImage(champion?.Id);
+            var championImage = _info.ChampionAssetController.GetImage(champion?.Id);
             var image = Utilities.AddChampionToSpellImage(spellImage, championImage);
 
             await Connection.SetImageAsync(image);
@@ -308,13 +388,27 @@ namespace LeagueDeck
 
             Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Chat Message - initiated");
 
-            var enemies = await _info.GetEnemies(_cts.Token);
+            var enemies = await ApiController.GetEnemies(_cts.Token);
             if (enemies == null || enemies.Count - 1 < (int)_settings.Summoner)
                 return;
 
-            var participant = enemies[(int)_settings.Summoner];
+            var participant = enemies.ElementAtOrDefault((int)_settings.Summoner);
+            if (participant == null)
+                return;
 
-            var spell = _info.GetSpell(_settings.Summoner, _settings.Spell);
+            if (!_info.SummonerNameToPlayer.TryGetValue(participant.SummonerName, out var player))
+            {
+                // TODO log
+                return;
+            }
+
+            Player = player;
+
+            if (!player.ESpellToSpell.TryGetValue(_settings.Spell, out var spell))
+            {
+                // TODO log
+                return;
+            }
 
             var rest = _endTime - DateTime.Now;
 
@@ -322,7 +416,7 @@ namespace LeagueDeck
             switch (_settings.ChatFormat)
             {
                 case EChatFormat.GameTime:
-                    var gameData = await _info.GetGameData(_cts.Token);
+                    var gameData = await ApiController.GetGameData(_cts.Token);
                     var inGameEndTime = TimeSpan.FromSeconds(gameData.Time).Add(rest);
                     if (inGameEndTime.Seconds == 60)
                     {

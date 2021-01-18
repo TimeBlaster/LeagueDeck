@@ -36,7 +36,7 @@
   "Description": "Provides tools for League of Legends to help you keep track of the game.",
   "Icon": "Images/Plugin/pluginIcon",
   "URL": "https://github.com/TimeBlaster/LeagueDeck",
-  "Version": "2.5",
+  "Version": "3.0",
   "CodePath": "dev.timeblaster.leaguedeck",
   "Category": "LeagueDeck",
   "CategoryIcon": "Images/Plugin/categoryIcon",

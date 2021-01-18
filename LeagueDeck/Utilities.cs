@@ -2,9 +2,7 @@
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Net;
 using System.Threading;
-using System.Threading.Tasks;
 using WindowsInput;
 
 namespace LeagueDeck
@@ -12,6 +10,10 @@ namespace LeagueDeck
     public static class Utilities
     {
         #region vars
+
+        public const string cLeagueOfLegendsProcessName = "League of Legends.exe";
+
+        private static readonly string _pluginImageFolder = Path.Combine(Environment.CurrentDirectory, "Images", "Plugin");
 
         private static readonly ColorMatrix grayscaleMatrix = new ColorMatrix(
             new float[][] {
@@ -24,7 +26,7 @@ namespace LeagueDeck
 
         private const string cUpdateImageName = "updating@2x.png";
         private const string cCheckMarkImageName = "check@2x.png";
-        private static readonly string _pluginImageFolder = Path.Combine(Environment.CurrentDirectory, "Images", "Plugin");
+
         private static Image _updateImage;
         private static Image _checkMarkImage;
 
@@ -122,38 +124,6 @@ namespace LeagueDeck
             InputRunning = false;
         }
 
-        public static async Task<string> GetApiResponse(string url, CancellationToken ct)
-        {
-            HttpWebResponse response = null;
-            while (response == null)
-            {
-                try
-                {
-                    if (ct.IsCancellationRequested)
-                        return string.Empty;
-
-                    var request = (HttpWebRequest)WebRequest.Create(url);
-
-                    // accept all SSL certificates
-                    request.ServerCertificateValidationCallback += (sender, cert, chain, sslPolicyErrors) => true;
-
-                    response = (HttpWebResponse)await request.GetResponseAsync();
-                }
-                catch
-                {
-                    await Task.Delay(500, ct);
-                }
-            }
-
-            using (var stream = response.GetResponseStream())
-            {
-                using (var sr = new StreamReader(stream))
-                {
-                    return sr.ReadToEnd();
-                }
-            };
-        }
-
-        #endregion    
+        #endregion
     }
 }

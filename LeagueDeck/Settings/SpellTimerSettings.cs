@@ -1,6 +1,7 @@
-﻿using Newtonsoft.Json;
+﻿using LeagueDeck.Models;
+using Newtonsoft.Json;
 
-namespace LeagueDeck
+namespace LeagueDeck.Settings
 {
     public class SpellTimerSettings
     {
@@ -38,5 +39,12 @@ namespace LeagueDeck
 
         [JsonProperty(PropertyName = "spell")]
         public ESpell Spell { get; set; }
+    }
+
+    public enum EChatFormat
+    {
+        GameTime = 0,
+        RemainingSeconds = 1,
+        RemainingMinutesAndSeconds = 2,
     }
 }

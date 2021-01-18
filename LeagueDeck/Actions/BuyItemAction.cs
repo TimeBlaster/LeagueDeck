@@ -1,5 +1,6 @@
 ﻿using BarRaider.SdTools;
-using LeagueDeck.ApiResponse;
+using LeagueDeck.Core;
+using LeagueDeck.Settings;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -10,7 +11,7 @@ using System.Threading.Tasks;
 namespace LeagueDeck
 {
     [PluginActionId("dev.timeblaster.leaguedeck.buyitem")]
-    public class BuyItemPlugin : PluginBase
+    public class BuyItemAction : PluginBase
     {
         #region vars
 
@@ -18,7 +19,7 @@ namespace LeagueDeck
 
         private BuyItemSettings _settings;
 
-        private LeagueInfo _info;
+        private LeagueDeckData _info;
         private bool _isInGame;
 
         private bool _keyPressed = false;
@@ -29,16 +30,17 @@ namespace LeagueDeck
 
         #region ctor
 
-        public BuyItemPlugin(SDConnection connection, InitialPayload payload)
+        public BuyItemAction(SDConnection connection, InitialPayload payload)
             : base(connection, payload)
         {
             Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Constructor called");
 
-            LeagueInfo.OnUpdateStarted += LeagueInfo_OnUpdateStarted;
-            LeagueInfo.OnUpdateProgress += LeagueInfo_OnUpdateProgress;
-            LeagueInfo.OnUpdateCompleted += LeagueInfo_OnUpdateCompleted;
+            var updateProgressReporter = UpdateProgressReporter.GetInstance();
+            updateProgressReporter.OnUpdateStarted += LeagueInfo_OnUpdateStarted;
+            updateProgressReporter.OnUpdateProgress += LeagueInfo_OnUpdateProgress;
+            updateProgressReporter.OnUpdateCompleted += LeagueInfo_OnUpdateCompleted;
 
-            _info = LeagueInfo.GetInstance(_cts.Token);
+            _info = LeagueDeckData.GetInstance(_cts.Token);
 
             Connection.OnApplicationDidLaunch += Connection_OnApplicationDidLaunch;
             Connection.OnApplicationDidTerminate += Connection_OnApplicationDidTerminate;
@@ -65,13 +67,13 @@ namespace LeagueDeck
             Task.Run(async () =>
             {
                 await _info.UpdateTask;
-                _settings.Items = _info.GetItems();
+                _settings.Items = _info.ItemAssetController.GetAssets();
                 await SaveSettings();
                 UpdateItemImage(_settings.ItemId);
 
                 if (_settings.DisplayFormat == EBuyItemDisplayFormat.TotalCost)
                 {
-                    var item = _info.GetItem(_settings.ItemId);
+                    var item = _info.ItemAssetController.GetAsset(_settings.ItemId);
                     await Connection.SetTitleAsync($"{item.TotalCost:F0}");
                 }
             });
@@ -83,7 +85,7 @@ namespace LeagueDeck
 
         private async void Connection_OnApplicationDidLaunch(object sender, BarRaider.SdTools.Wrappers.SDEventReceivedEventArgs<BarRaider.SdTools.Events.ApplicationDidLaunch> e)
         {
-            if (e.Event.Payload.Application != "League of Legends.exe")
+            if (e.Event.Payload.Application != Utilities.cLeagueOfLegendsProcessName)
                 return;
 
             Logger.Instance.LogMessage(TracingLevel.DEBUG, "GameStarted");
@@ -98,7 +100,7 @@ namespace LeagueDeck
 
         private async void Connection_OnApplicationDidTerminate(object sender, BarRaider.SdTools.Wrappers.SDEventReceivedEventArgs<BarRaider.SdTools.Events.ApplicationDidTerminate> e)
         {
-            if (e.Event.Payload.Application != "League of Legends.exe")
+            if (e.Event.Payload.Application != Utilities.cLeagueOfLegendsProcessName)
                 return;
 
             _isInGame = false;
@@ -125,18 +127,18 @@ namespace LeagueDeck
             UpdateItemImage(_settings.ItemId);
         }
 
-        private async void LeagueInfo_OnUpdateStarted(object sender, LeagueInfo.UpdateEventArgs e)
+        private async void LeagueInfo_OnUpdateStarted(object sender, ProgressEventArgs e)
         {
             var image = Utilities.GetUpdateImage();
             await Connection.SetImageAsync(image);
         }
 
-        private async void LeagueInfo_OnUpdateProgress(object sender, LeagueInfo.UpdateEventArgs e)
+        private async void LeagueInfo_OnUpdateProgress(object sender, ProgressEventArgs e)
         {
-            await Connection.SetTitleAsync($"{e.Progress}%");
+            await Connection.SetTitleAsync($"{(int)e.Percentage}%");
         }
 
-        private async void LeagueInfo_OnUpdateCompleted(object sender, LeagueInfo.UpdateEventArgs e)
+        private async void LeagueInfo_OnUpdateCompleted(object sender, ProgressEventArgs e)
         {
             await Connection.SetDefaultImageAsync();
             await Connection.SetTitleAsync(string.Empty);
@@ -146,7 +148,7 @@ namespace LeagueDeck
 
         #region Overrides
 
-        public override async void KeyPressed(KeyPayload payload)
+        public override void KeyPressed(KeyPayload payload)
         {
             if (!_isInGame)
                 return;
@@ -156,7 +158,7 @@ namespace LeagueDeck
             _keyPressed = true;
         }
 
-        public async override void KeyReleased(KeyPayload payload)
+        public override void KeyReleased(KeyPayload payload)
         {
             _keyPressed = false;
         }
@@ -166,16 +168,16 @@ namespace LeagueDeck
             if (!_isInGame)
                 return;
 
-            var activePlayer = await _info.GetActivePlayer(_cts.Token);
+            var activePlayer = await ApiController.GetActivePlayer(_cts.Token);
             if (activePlayer == null)
                 return;
 
-            var participant = await _info.GetSummoner(activePlayer.Name, _cts.Token);
+            var participant = await ApiController.GetParticipant(activePlayer.Name, _cts.Token);
             if (participant == null)
                 return;
 
             var inventory = participant.Items.ToList();
-            var itemOwned = inventory.Any(x => x.Id == _settings.ItemId);
+            var itemOwned = inventory.Any(x => x.Id.ToString() == _settings.ItemId);
 
             var remaining = GetGoldNecessary(activePlayer, inventory, _settings.ItemId);
             var canPurchase = remaining <= 0;
@@ -209,7 +211,7 @@ namespace LeagueDeck
             switch (_settings.DisplayFormat)
             {
                 case EBuyItemDisplayFormat.TotalCost:
-                    var item = _info.GetItem(_settings.ItemId);
+                    var item = _info.ItemAssetController.GetAsset(_settings.ItemId);
                     await Connection.SetTitleAsync($"{item.TotalCost:F0}");
                     break;
 
@@ -234,9 +236,10 @@ namespace LeagueDeck
         {
             Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Destructor called");
 
-            LeagueInfo.OnUpdateStarted -= LeagueInfo_OnUpdateStarted;
-            LeagueInfo.OnUpdateProgress -= LeagueInfo_OnUpdateProgress;
-            LeagueInfo.OnUpdateCompleted -= LeagueInfo_OnUpdateCompleted;
+            var updateProgressReporter = UpdateProgressReporter.GetInstance();
+            updateProgressReporter.OnUpdateStarted -= LeagueInfo_OnUpdateStarted;
+            updateProgressReporter.OnUpdateProgress -= LeagueInfo_OnUpdateProgress;
+            updateProgressReporter.OnUpdateCompleted -= LeagueInfo_OnUpdateCompleted;
 
             Connection.OnApplicationDidLaunch -= Connection_OnApplicationDidLaunch;
             Connection.OnApplicationDidTerminate -= Connection_OnApplicationDidTerminate;
@@ -249,9 +252,9 @@ namespace LeagueDeck
 
         #region Private Methods
 
-        private async void UpdateItemImage(int itemId, bool grayscale = false, bool checkMark = false)
+        private async void UpdateItemImage(string itemId, bool grayscale = false, bool checkMark = false)
         {
-            var image = _info.GetItemImage(itemId);
+            var image = _info.ItemAssetController.GetImage(itemId);
 
             if (grayscale)
                 image = Utilities.GrayscaleImage(image);
@@ -262,11 +265,11 @@ namespace LeagueDeck
             await Connection.SetImageAsync(image);
         }
 
-        private int GetRemainingCost(List<ApiResponse.Item> inventory, int itemId)
+        private int GetRemainingCost(List<Models.Api.Item> inventory, string itemId)
         {
-            var item = _info.GetItem(itemId);
+            var item = _info.ItemAssetController.GetAsset(itemId);
 
-            var invItem = inventory.FirstOrDefault(x => x.Id == item.Id);
+            var invItem = inventory.FirstOrDefault(x => x.Id.ToString() == item.Id);
 
             if (invItem != null)
             {
@@ -278,13 +281,13 @@ namespace LeagueDeck
                 var cost = item.BaseCost;
                 foreach (var componentId in item.ComponentIds)
                 {
-                    cost += GetRemainingCost(inventory, componentId);
+                    cost += GetRemainingCost(inventory, componentId.ToString());
                 }
                 return cost;
             }
         }
 
-        private double GetGoldNecessary(ActivePlayer player, List<ApiResponse.Item> inventory, int itemId)
+        private double GetGoldNecessary(Models.Api.ActivePlayer player, List<Models.Api.Item> inventory, string itemId)
         {
             var remaining = GetRemainingCost(inventory, itemId);
             return remaining - player.CurrentGold;
