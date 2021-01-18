@@ -2,9 +2,8 @@
 
 namespace LeagueDeck.Models
 {
-    public class Spell
+    public class Spell : Asset<Spell>
     {
-        public string Id { get; set; }
         public string Name { get; set; }
         public int MaxRank { get; set; }
         public List<double> Cooldown { get; set; }

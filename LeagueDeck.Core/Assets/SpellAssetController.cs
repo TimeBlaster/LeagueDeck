@@ -3,7 +3,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -14,43 +13,27 @@ namespace LeagueDeck.Core
 {
     public class SpellAssetController : AssetController<Spell>, IAssetLoader
     {
-        private const string cAssetName = "Spells";
-
         private const string cChampionsDataUrl = "https://ddragon.bangingheads.net/cdn/{0}/data/en_US/champion.json";
         private const string cChampionDataUrl = "https://ddragon.bangingheads.net/cdn/{0}/data/en_US/champion/{1}.json";
         private const string cSpellImageUrl = "https://ddragon.bangingheads.net/cdn/{0}/img/spell/{1}.png";
 
-        private readonly string _spellImageFolder = Path.Combine(Environment.CurrentDirectory, cImageFolderName, cAssetName);
-
-        private List<Spell> _spells = new List<Spell>();
-
         public async Task LoadAssets(string version, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(version))
-                version = await GetLatestVersion(ct);
+            InitDirectories(version);
 
-            var leagueDeckPatchFolder = Path.Combine(_leagueDeckDataFolder, version);
-            var jsonPath = Path.Combine(leagueDeckPatchFolder, $"{cAssetName}.json");
-
+            var jsonPath = await GetJsonPath(version, ct);
             if (!File.Exists(jsonPath))
                 await DownloadAssets(version, ct, true);
 
             var json = File.ReadAllText(jsonPath);
-            _spells = JsonConvert.DeserializeObject<List<Spell>>(json);
+            _assets = JsonConvert.DeserializeObject<List<Spell>>(json);
         }
 
         public async Task DownloadAssets(string version, CancellationToken ct, bool force = false)
         {
-            if (string.IsNullOrWhiteSpace(version))
-                version = await GetLatestVersion(ct);
+            InitDirectories(version);
 
-            Directory.CreateDirectory(_spellImageFolder);
-
-            var leagueDeckPatchFolder = Path.Combine(_leagueDeckDataFolder, version);
-            Directory.CreateDirectory(leagueDeckPatchFolder);
-
-            var jsonPath = Path.Combine(leagueDeckPatchFolder, $"{cAssetName}.json");
-
+            var jsonPath = await GetJsonPath(version, ct);
             if (File.Exists(jsonPath) && !force)
                 return;
 
@@ -63,7 +46,7 @@ namespace LeagueDeck.Core
                     foreach (var spell in champion.Spells)
                     {
                         var url = string.Format(cSpellImageUrl, version, spell.Id);
-                        var imgPath = Path.Combine(_spellImageFolder, $"{spell.Id}.png");
+                        var imgPath = Path.Combine(_imageFolder, $"{spell.Id}.png");
                         await wc.DownloadFileTaskAsync(url, imgPath);
 
                         _updateProgressReporter.IncrementCurrent();
@@ -114,35 +97,6 @@ namespace LeagueDeck.Core
             }
 
             return championList;
-        }
-
-        public override Spell GetAsset(string id)
-        {
-            var spell = _spells.FirstOrDefault(x => x.Id == id);
-            if(spell == null)
-            {
-                spell = Spell.Default;
-                // TODO: log
-            }
-            return spell;
-        }
-
-        public override IReadOnlyList<Spell> GetAssets()
-        {
-            return _spells.AsReadOnly();
-        }
-
-        public override Image GetImage(string id)
-        {
-            var path = Path.Combine(_spellImageFolder, $"{id}.png");
-
-            if (!File.Exists(path))
-            {
-                id = _missingImageId;
-                path = Path.Combine(_spellImageFolder, $"{id}.png");
-            }
-
-            return Image.FromFile(path);
         }
     }
 }

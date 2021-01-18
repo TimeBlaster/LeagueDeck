@@ -3,7 +3,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -14,43 +13,27 @@ namespace LeagueDeck.Core
 {
     public class ChampionAssetController : AssetController<Champion>, IAssetLoader
     {
-        private const string cAssetName = "Champions";
-
         private const string cChampionsDataUrl = "https://ddragon.bangingheads.net/cdn/{0}/data/en_US/champion.json";
         private const string cChampionDataUrl = "https://ddragon.bangingheads.net/cdn/{0}/data/en_US/champion/{1}.json";
         private const string cChampionImageUrl = "https://ddragon.bangingheads.net/cdn/{0}/img/champion/{1}.png";
 
-        private readonly string _championImageFolder = Path.Combine(Environment.CurrentDirectory, cImageFolderName, cAssetName);
-
-        private List<Champion> _champions = new List<Champion>();
-
         public async Task LoadAssets(string version, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(version))
-                version = await GetLatestVersion(ct);
+            InitDirectories(version);
 
-            var leagueDeckPatchFolder = Path.Combine(_leagueDeckDataFolder, version);
-            var jsonPath = Path.Combine(leagueDeckPatchFolder, $"{cAssetName}.json");
-
+            var jsonPath = await GetJsonPath(version, ct);
             if (!File.Exists(jsonPath))
                 await DownloadAssets(version, ct, true);
 
             var json = File.ReadAllText(jsonPath);
-            _champions = JsonConvert.DeserializeObject<List<Champion>>(json);
+            _assets = JsonConvert.DeserializeObject<List<Champion>>(json);
         }
 
         public async Task DownloadAssets(string version, CancellationToken ct, bool force = false)
         {
-            if (string.IsNullOrWhiteSpace(version))
-                version = await GetLatestVersion(ct);
+            InitDirectories(version);
 
-            Directory.CreateDirectory(_championImageFolder);
-
-            var leagueDeckPatchFolder = Path.Combine(_leagueDeckDataFolder, version);
-            Directory.CreateDirectory(leagueDeckPatchFolder);
-
-            var jsonPath = Path.Combine(leagueDeckPatchFolder, $"{cAssetName}.json");
-
+            var jsonPath = await GetJsonPath(version, ct);
             if (File.Exists(jsonPath) && !force)
                 return;
 
@@ -61,7 +44,7 @@ namespace LeagueDeck.Core
                 foreach (var champion in champions)
                 {
                     var url = string.Format(cChampionImageUrl, version, champion.Id);
-                    var imgPath = Path.Combine(_championImageFolder, $"{champion.Id}.png");
+                    var imgPath = Path.Combine(_imageFolder, $"{champion.Id}.png");
                     await wc.DownloadFileTaskAsync(url, imgPath);
 
                     _updateProgressReporter.IncrementCurrent();
@@ -112,38 +95,5 @@ namespace LeagueDeck.Core
 
             return championList;
         }
-
-        #region Overrides
-
-        public override Champion GetAsset(string id)
-        {
-            var champion = _champions.FirstOrDefault(x => x.Id == id);
-            if(champion == null)
-            {
-                champion = Champion.Default;
-                // TODO: log
-            }
-            return champion;
-        }
-
-        public override IReadOnlyList<Champion> GetAssets()
-        {
-            return _champions.AsReadOnly();
-        }
-
-        public override Image GetImage(string id)
-        {
-            var path = Path.Combine(_championImageFolder, $"{id}.png");
-
-            if (!File.Exists(path))
-            {
-                id = _missingImageId;
-                path = Path.Combine(_championImageFolder, $"{id}.png");
-            }
-
-            return Image.FromFile(path);
-        }
-
-        #endregion
     }
 }

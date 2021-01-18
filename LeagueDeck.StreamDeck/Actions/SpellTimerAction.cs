@@ -34,21 +34,6 @@ namespace LeagueDeck
         private bool _longPress = false;
         private bool _timerEnabled;
 
-        private Player _player;
-        private Player Player
-        {
-            get => _player; 
-            set
-            {
-                if(_player != value)
-                {
-                    _player = value;
-                    UpdateSpellImage();
-                }
-            }
-        }
-
-
         #endregion
 
         #region ctor
@@ -171,9 +156,7 @@ namespace LeagueDeck
                 return;
             }
 
-            Player = player;
-
-            if (!Player.ESpellToSpell.TryGetValue(_settings.Spell, out var spell))
+            if (!player.ESpellToSpell.TryGetValue(_settings.Spell, out var spell))
             {
                 // TODO log
                 return;
@@ -255,28 +238,6 @@ namespace LeagueDeck
                 }
             }
 
-            var enemies = await ApiController.GetEnemies(_cts.Token);
-            if (enemies == null || enemies.Count - 1 < (int)_settings.Summoner)
-                return;
-
-            var participant = enemies.ElementAtOrDefault((int)_settings.Summoner);
-            if (participant == null)
-                return;
-
-            if (!_info.SummonerNameToPlayer.TryGetValue(participant.SummonerName, out var player))
-            {
-                // TODO log
-                return;
-            }
-
-            Player = player;
-
-            if (!player.ESpellToSpell.TryGetValue(_settings.Spell, out var spell))
-            {
-                // TODO log
-                return;
-            }
-
             await CheckIfResetNeeded();
         }
 
@@ -329,8 +290,6 @@ namespace LeagueDeck
                 // TODO log
                 return;
             }
-
-            Player = player;
 
             if (!player.ESpellToSpell.TryGetValue(_settings.Spell, out var spell))
             {
@@ -401,8 +360,6 @@ namespace LeagueDeck
                 // TODO log
                 return;
             }
-
-            Player = player;
 
             if (!player.ESpellToSpell.TryGetValue(_settings.Spell, out var spell))
             {

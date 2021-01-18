@@ -65,7 +65,7 @@ namespace LeagueDeck.Core
             return _instance;
         }
 
-        public void IncrementCurrent()
+        internal void IncrementCurrent()
         {
             this.Current++;
         }

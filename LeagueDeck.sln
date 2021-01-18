@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30225.117
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LeagueDeck", "LeagueDeck\LeagueDeck.csproj", "{4635D874-69C0-4010-BE46-77EF92EB1553}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LeagueDeck.StreamDeck", "LeagueDeck.StreamDeck\LeagueDeck.StreamDeck.csproj", "{4635D874-69C0-4010-BE46-77EF92EB1553}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LeagueDeck.Core", "LeagueDeck.Info\LeagueDeck.Core.csproj", "{B237DBFC-31DB-4B55-A2A5-EBDB296B395B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LeagueDeck.Core", "LeagueDeck.Core\LeagueDeck.Core.csproj", "{B237DBFC-31DB-4B55-A2A5-EBDB296B395B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

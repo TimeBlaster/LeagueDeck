@@ -22,10 +22,6 @@ namespace LeagueDeck
         private LeagueDeckData _info;
         private bool _isInGame;
 
-        private bool _keyPressed = false;
-
-        const int cResetTimerKeypressLength = 500;
-
         #endregion
 
         #region ctor
@@ -154,14 +150,10 @@ namespace LeagueDeck
                 return;
 
             // TODO: buy item
-
-            _keyPressed = true;
         }
 
         public override void KeyReleased(KeyPayload payload)
-        {
-            _keyPressed = false;
-        }
+        { }
 
         public override async void OnTick()
         {

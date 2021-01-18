@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace LeagueDeck.Models
 {
-    public class Item
+    public class Item : Asset<Item>
     {
-        public string Id { get; set; }
         public string Name { get; set; }
         public double AbilityHaste { get; set; }
         public int BaseCost { get; set; }

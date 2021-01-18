@@ -133,7 +133,7 @@ namespace LeagueDeck.Core
             }
         }
 
-        public static async Task<string> GetApiResponse(string url, CancellationToken ct)
+        internal static async Task<string> GetApiResponse(string url, CancellationToken ct)
         {
             HttpWebResponse response = null;
             while (response == null)
