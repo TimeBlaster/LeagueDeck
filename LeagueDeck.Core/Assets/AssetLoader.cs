@@ -31,18 +31,12 @@ namespace LeagueDeck
 
         public async Task UpdateData(CancellationToken ct, string version = null, bool force = false)
         {
-            foreach (var loader in _assetLoaders)
-            {
-                await loader.DownloadAssets(version, ct, force);
-            }
+            await Task.WhenAll(_assetLoaders.Select(x => x.DownloadAssets(version, ct, force)));
         }
 
         public async Task LoadData(CancellationToken ct, string version = null)
         {
-            foreach (var loader in _assetLoaders)
-            {
-                await loader.LoadAssets(version, ct);
-            }
+            await Task.WhenAll(_assetLoaders.Select(x => x.LoadAssets(version, ct)));
         }
     }
 }

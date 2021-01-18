@@ -6,19 +6,20 @@ namespace LeagueDeck.Models
     {
         public string Name { get; set; }
         public List<Spell> Spells { get; set; }
-
-        public Champion()
+        public override Champion SetDefault()
         {
             Id = "???";
             Name = "???";
             Spells = new List<Spell>
             {
-                Spell.Default,
-                Spell.Default,
-                Spell.Default,
-                Spell.Default,
-                Spell.Default,
+                new Spell().SetDefault(),
+                new Spell().SetDefault(),
+                new Spell().SetDefault(),
+                new Spell().SetDefault(),
+                new Spell().SetDefault(),
             };
+
+            return this;
         }
     }
 }

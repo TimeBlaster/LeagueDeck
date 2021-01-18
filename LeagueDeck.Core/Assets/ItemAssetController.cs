@@ -11,25 +11,16 @@ using System.Threading.Tasks;
 
 namespace LeagueDeck.Core
 {
-    public class ItemAssetController : AssetController<Item>, IAssetLoader
+    public class ItemAssetController : AssetController<Item>
     {
         private const string cItemDataUrl = "https://ddragon.bangingheads.net/cdn/{0}/data/en_US/item.json";
         private const string cItemImageUrl = "https://ddragon.bangingheads.net/cdn/{0}/img/item/{1}.png";
 
-        public async Task LoadAssets(string version, CancellationToken ct)
+        public override async Task DownloadAssets(string version, CancellationToken ct, bool force = false)
         {
-            InitDirectories(version);
+            if (string.IsNullOrWhiteSpace(version))
+                version = await GetLatestVersion(ct);
 
-            var jsonPath = await GetJsonPath(version, ct);
-            if (!File.Exists(jsonPath))
-                await DownloadAssets(version, ct, true);
-
-            var json = File.ReadAllText(jsonPath);
-            _assets = JsonConvert.DeserializeObject<List<Item>>(json);
-        }
-
-        public async Task DownloadAssets(string version, CancellationToken ct, bool force = false)
-        {
             InitDirectories(version);
 
             var jsonPath = await GetJsonPath(version, ct);

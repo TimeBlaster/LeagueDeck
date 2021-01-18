@@ -9,12 +9,16 @@ namespace LeagueDeck.Models
         public int BaseCost { get; set; }
         public int TotalCost { get; set; }
         public List<int> ComponentIds { get; set; }
-
-        public static Item Default = new Item
+        public override Item SetDefault()
         {
-            Id = "???",
-            Name = "???",
-            AbilityHaste = 0,
-        };
+            Id = "???";
+            Name = "???";
+            AbilityHaste = 0;
+            BaseCost = 0;
+            TotalCost = 0;
+            ComponentIds = new List<int>();
+
+            return this;
+        }
     }
 }

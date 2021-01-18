@@ -45,10 +45,9 @@ namespace LeagueDeck.Core
             set
             {
                 if (_total == 0 && value > 0)
-                {
-                    _total = value;
-                    OnUpdateStarted?.Invoke(this, new ProgressEventArgs(_current, _total));
-                }
+                    OnUpdateStarted?.Invoke(this, new ProgressEventArgs(_current, value));
+
+                _total = value;
             }
         }
 

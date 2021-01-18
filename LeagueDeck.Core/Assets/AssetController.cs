@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace LeagueDeck.Core
 {
-    public abstract class AssetController<T> where T : Asset<T>, new()
+    public abstract class AssetController<T> : IAssetLoader where T : Asset<T>, new()
     {
         #region vars
 
@@ -23,7 +23,7 @@ namespace LeagueDeck.Core
         protected readonly UpdateProgressReporter _updateProgressReporter = UpdateProgressReporter.GetInstance();
 
         protected readonly string _leagueDeckDataFolder = Path.Combine(Environment.CurrentDirectory, cLeagueDeckDataFolderName);
-        protected readonly string _imageFolder = Path.Combine(Environment.CurrentDirectory, cImageFolderName, nameof(T));
+        protected readonly string _imageFolder = Path.Combine(Environment.CurrentDirectory, cImageFolderName, typeof(T).Name);
         protected const string cMissingImageId = "Missing";
 
         protected List<T> _assets;
@@ -33,18 +33,35 @@ namespace LeagueDeck.Core
                 Environment.CurrentDirectory, 
                 cLeagueDeckDataFolderName, 
                 string.IsNullOrWhiteSpace(version) ? await GetLatestVersion(ct) : version, 
-                $"{nameof(T)}.json");
+                $"{typeof(T).Name}.json");
 
         #endregion
 
+        public abstract Task DownloadAssets(string version, CancellationToken ct, bool force = false);
+
         #region Public Methods
+
+        public async Task LoadAssets(string version, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(version))
+                version = await GetLatestVersion(ct);
+
+            InitDirectories(version);
+
+            var jsonPath = await GetJsonPath(version, ct);
+            if (!File.Exists(jsonPath))
+                await DownloadAssets(version, ct, true);
+
+            var json = File.ReadAllText(jsonPath);
+            _assets = JsonConvert.DeserializeObject<List<T>>(json);
+        }
 
         public T GetAsset(string id)
         {
             var asset = _assets.FirstOrDefault(x => x.Id == id);
             if (asset == null)
             {
-                asset = new T();
+                asset = new T().SetDefault();
                 // TODO: log
             }
             return asset;

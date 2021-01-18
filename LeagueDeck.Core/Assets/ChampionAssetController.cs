@@ -11,26 +11,23 @@ using System.Threading.Tasks;
 
 namespace LeagueDeck.Core
 {
-    public class ChampionAssetController : AssetController<Champion>, IAssetLoader
+    public class ChampionAssetController : AssetController<Champion>
     {
         private const string cChampionsDataUrl = "https://ddragon.bangingheads.net/cdn/{0}/data/en_US/champion.json";
         private const string cChampionDataUrl = "https://ddragon.bangingheads.net/cdn/{0}/data/en_US/champion/{1}.json";
         private const string cChampionImageUrl = "https://ddragon.bangingheads.net/cdn/{0}/img/champion/{1}.png";
 
-        public async Task LoadAssets(string version, CancellationToken ct)
+        public Champion GetChampion(string championName)
         {
-            InitDirectories(version);
-
-            var jsonPath = await GetJsonPath(version, ct);
-            if (!File.Exists(jsonPath))
-                await DownloadAssets(version, ct, true);
-
-            var json = File.ReadAllText(jsonPath);
-            _assets = JsonConvert.DeserializeObject<List<Champion>>(json);
+            var id = _assets.FirstOrDefault(x => x.Name == championName)?.Id ?? string.Empty;
+            return GetAsset(id);
         }
 
-        public async Task DownloadAssets(string version, CancellationToken ct, bool force = false)
+        public override async Task DownloadAssets(string version, CancellationToken ct, bool force = false)
         {
+            if (string.IsNullOrWhiteSpace(version))
+                version = await GetLatestVersion(ct);
+
             InitDirectories(version);
 
             var jsonPath = await GetJsonPath(version, ct);

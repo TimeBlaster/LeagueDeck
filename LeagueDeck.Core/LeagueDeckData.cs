@@ -34,7 +34,6 @@ namespace LeagueDeck.Core
         public ChampionAssetController ChampionAssetController { get; private set; }
         public SpellAssetController SpellAssetController { get; private set; }
         public ItemAssetController ItemAssetController { get; private set; }
-        public SummonerSpellAssetController SummonerSpellAssetController { get; private set; }
 
         #endregion
 
@@ -46,13 +45,11 @@ namespace LeagueDeck.Core
             {
                 ChampionAssetController = new ChampionAssetController();
                 SpellAssetController = new SpellAssetController();
-                SummonerSpellAssetController = new SummonerSpellAssetController();
                 ItemAssetController = new ItemAssetController();
 
                 var assetLoader = new AssetLoader();
                 assetLoader.Add(ChampionAssetController);
                 assetLoader.Add(SpellAssetController);
-                assetLoader.Add(SummonerSpellAssetController);
                 assetLoader.Add(ItemAssetController);
 
                 Directory.CreateDirectory(_leagueDeckDataFolder);
@@ -112,42 +109,42 @@ namespace LeagueDeck.Core
 
                     foreach(var participant in participants)
                     {
-                        var champion = ChampionAssetController.GetAsset(participant.ChampionName);
+                        var champion = ChampionAssetController.GetChampion(participant.ChampionName);
                         _idToImage[champion.Id] = ChampionAssetController.GetImage(champion.Id);
 
                         var spellDict = new Dictionary<ESpell, Spell>();
 
-                        var summonerSpell1 = SummonerSpellAssetController.GetAsset(participant.SummonerSpells.Spell1.Id);
+                        var summonerSpell1 = SpellAssetController.GetAsset(participant.SummonerSpells.Spell1.Id);
                         spellDict[ESpell.SummonerSpell1] = summonerSpell1;
                         if (!IdToImage.ContainsKey(summonerSpell1.Id))
-                            _idToImage[summonerSpell1.Id] = SummonerSpellAssetController.GetImage(summonerSpell1.Id);
+                            _idToImage[summonerSpell1.Id] = SpellAssetController.GetImage(summonerSpell1.Id);
 
-                        var summonerSpell2 = SummonerSpellAssetController.GetAsset(participant.SummonerSpells.Spell2.Id);
+                        var summonerSpell2 = SpellAssetController.GetAsset(participant.SummonerSpells.Spell2.Id);
                         spellDict[ESpell.SummonerSpell2] = summonerSpell2;
                         if (!IdToImage.ContainsKey(summonerSpell2.Id))
-                            _idToImage[summonerSpell2.Id] = SummonerSpellAssetController.GetImage(summonerSpell2.Id);
+                            _idToImage[summonerSpell2.Id] = SpellAssetController.GetImage(summonerSpell2.Id);
 
                         var spells = champion.Spells;
 
                         var q = spells[0];
                         spellDict[ESpell.Q] = q;
                         if (!IdToImage.ContainsKey(q.Id))
-                            _idToImage[q.Id] = ChampionAssetController.GetImage(q.Id);
+                            _idToImage[q.Id] = SpellAssetController.GetImage(q.Id);
 
                         var w = spells[1];
                         spellDict[ESpell.W] = w;
                         if (!IdToImage.ContainsKey(w.Id))
-                            _idToImage[w.Id] = ChampionAssetController.GetImage(w.Id);
+                            _idToImage[w.Id] = SpellAssetController.GetImage(w.Id);
 
                         var e = spells[2];
                         spellDict[ESpell.E] = e;
                         if (!IdToImage.ContainsKey(e.Id))
-                            _idToImage[e.Id] = ChampionAssetController.GetImage(e.Id);
+                            _idToImage[e.Id] = SpellAssetController.GetImage(e.Id);
 
                         var r = spells[3];
                         spellDict[ESpell.R] = r;
                         if (!IdToImage.ContainsKey(r.Id))
-                            _idToImage[r.Id] = ChampionAssetController.GetImage(r.Id);
+                            _idToImage[r.Id] = SpellAssetController.GetImage(r.Id);
 
                         var player = new Player(champion, spellDict);
                         if (!SummonerNameToPlayer.ContainsKey(participant.SummonerName))

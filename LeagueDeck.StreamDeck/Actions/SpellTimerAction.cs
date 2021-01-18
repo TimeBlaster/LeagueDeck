@@ -149,7 +149,6 @@ namespace LeagueDeck
             if (participant == null)
                 return;
 
-            var champion = _info.ChampionAssetController.GetAsset(participant.ChampionName);
             if (!_info.SummonerNameToPlayer.TryGetValue(participant.SummonerName, out var player))
             {
                 // TODO log
@@ -202,7 +201,7 @@ namespace LeagueDeck
             _endTime = _keyPressStart.AddSeconds(cooldown - _settings.Offset);
             player.SpellToTimerEnd[_settings.Spell] = _endTime;
 
-            await UpdateSpellImage(spell, champion);
+            await UpdateSpellImage(spell, player.Champion);
         }
 
         public async override void KeyReleased(KeyPayload payload)
@@ -284,7 +283,6 @@ namespace LeagueDeck
             if (participant == null)
                 return;
 
-            var champion = _info.ChampionAssetController.GetAsset(participant.ChampionName);
             if (!_info.SummonerNameToPlayer.TryGetValue(participant.SummonerName, out var player))
             {
                 // TODO log
@@ -297,7 +295,7 @@ namespace LeagueDeck
                 return;
             }
 
-            await UpdateSpellImage(spell, champion);
+            await UpdateSpellImage(spell, player.Champion);
         }
 
         private async Task UpdateSpellImage(Spell spell, Champion champion)
@@ -310,25 +308,7 @@ namespace LeagueDeck
             if (champion == null)
                 Logger.Instance.LogMessage(TracingLevel.DEBUG, "Spell Image Update - champion is null");
 
-            Image spellImage;
-            switch (_settings.Spell)
-            {
-                case ESpell.Q:
-                case ESpell.W:
-                case ESpell.E:
-                case ESpell.R:
-                    spellImage = _info.SpellAssetController.GetImage(spell?.Id);
-                    break;
-
-                case ESpell.SummonerSpell1:
-                case ESpell.SummonerSpell2:
-                    spellImage = _info.SummonerSpellAssetController.GetImage(spell?.Id);
-                    break;
-
-                default:
-                    Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Spell Image Update - out of range: {_settings.Spell}");
-                    throw new ArgumentOutOfRangeException(nameof(_settings.Spell));
-            }
+            Image spellImage = _info.SpellAssetController.GetImage(spell?.Id);
 
             if (_timerEnabled)
                 spellImage = Utilities.GrayscaleImage(spellImage);
