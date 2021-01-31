@@ -86,10 +86,11 @@ namespace LeagueDeck
 
             Logger.Instance.LogMessage(TracingLevel.DEBUG, "GameStarted");
 
-            await Task.WhenAll(new[] { _info.LoadGameData(_cts.Token), _info.UpdateTask })
+            await Task.WhenAll(new[] { _info.UpdateTask, _info.UpdatePlayerList(_cts.Token) })
                 .ContinueWith(x =>
                 {
                     _isInGame = true;
+                    _info.StartGameService(_cts.Token);
                     UpdateItemImage(_settings.ItemId);
                 });
         }
@@ -100,8 +101,7 @@ namespace LeagueDeck
                 return;
 
             _isInGame = false;
-
-            _info.ClearGameData();
+            _info.ResetGameService();
 
             _cts.Cancel();
             _cts = new CancellationTokenSource();
@@ -160,11 +160,11 @@ namespace LeagueDeck
             if (!_isInGame)
                 return;
 
-            var activePlayer = await ApiController.GetActivePlayer(_cts.Token);
+            var activePlayer = await LiveClientApiController.GetActivePlayer(_cts.Token, DateTime.Now.AddSeconds(-1));
             if (activePlayer == null)
                 return;
 
-            var participant = await ApiController.GetParticipant(activePlayer.Name, _cts.Token);
+            var participant = await LiveClientApiController.GetParticipant(activePlayer.Name, _cts.Token, DateTime.Now.AddSeconds(-1));
             if (participant == null)
                 return;
 

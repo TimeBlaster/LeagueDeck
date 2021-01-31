@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -28,20 +29,20 @@ namespace LeagueDeck.Core
 
         protected List<T> _assets;
 
-        protected async Task<string> GetJsonPath(string version, CancellationToken ct) => 
+        protected async Task<string> GetJsonPath(string version, CancellationToken ct) =>
             Path.Combine(
-                Environment.CurrentDirectory, 
-                cLeagueDeckDataFolderName, 
-                string.IsNullOrWhiteSpace(version) ? await GetLatestVersion(ct) : version, 
+                Environment.CurrentDirectory,
+                cLeagueDeckDataFolderName,
+                string.IsNullOrWhiteSpace(version) ? await GetLatestVersion(ct) : version,
                 $"{typeof(T).Name}.json");
 
         #endregion
 
-        public abstract Task DownloadAssets(string version, CancellationToken ct, bool force = false);
+        public abstract Task DownloadAssets(HttpClient client, string version, CancellationToken ct, bool force = false);
 
         #region Public Methods
 
-        public async Task LoadAssets(string version, CancellationToken ct)
+        public async Task LoadAssets(HttpClient client, string version, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(version))
                 version = await GetLatestVersion(ct);
@@ -50,7 +51,9 @@ namespace LeagueDeck.Core
 
             var jsonPath = await GetJsonPath(version, ct);
             if (!File.Exists(jsonPath))
-                await DownloadAssets(version, ct, true);
+            {
+                await DownloadAssets(client, version, ct, true);
+            }
 
             var json = File.ReadAllText(jsonPath);
             _assets = JsonConvert.DeserializeObject<List<T>>(json);
@@ -93,7 +96,7 @@ namespace LeagueDeck.Core
         {
             if (string.IsNullOrEmpty(_latestVersion))
             {
-                var versionsJson = await ApiController.GetApiResponse(cVersionsUrl, ct);
+                var versionsJson = await LiveClientApiController.GetApiResponse(cVersionsUrl, ct);
                 var versions = JsonConvert.DeserializeObject<List<string>>(versionsJson);
 
                 _latestVersion = versions.FirstOrDefault();

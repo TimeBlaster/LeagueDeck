@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -23,7 +23,7 @@ namespace LeagueDeck.Core
             return GetAsset(id);
         }
 
-        public override async Task DownloadAssets(string version, CancellationToken ct, bool force = false)
+        public override async Task DownloadAssets(HttpClient hc, string version, CancellationToken ct, bool force = false)
         {
             if (string.IsNullOrWhiteSpace(version))
                 version = await GetLatestVersion(ct);
@@ -34,31 +34,31 @@ namespace LeagueDeck.Core
             if (File.Exists(jsonPath) && !force)
                 return;
 
-            var champions = await GetChampions(version, ct);
+            var champions = await GetChampions(hc, version, ct);
 
-            using (var wc = new WebClient())
+            foreach (var champion in champions)
             {
-                foreach (var champion in champions)
-                {
-                    var url = string.Format(cChampionImageUrl, version, champion.Id);
-                    var imgPath = Path.Combine(_imageFolder, $"{champion.Id}.png");
-                    await wc.DownloadFileTaskAsync(url, imgPath);
+                var url = string.Format(cChampionImageUrl, version, champion.Id);
+                var imgPath = Path.Combine(_imageFolder, $"{champion.Id}.png");
 
-                    _updateProgressReporter.IncrementCurrent();
+                var response = await hc.GetAsync(url);
+                using (var fs = new FileStream(imgPath, FileMode.Create))
+                {
+                    await response.Content.CopyToAsync(fs);
                 }
+
+                _updateProgressReporter.IncrementCurrent();
             }
 
             var json = JsonConvert.SerializeObject(champions);
             File.WriteAllText(jsonPath, json);
         }
 
-        private async Task<List<Champion>> GetChampions(string version, CancellationToken ct)
+        private async Task<List<Champion>> GetChampions(HttpClient hc, string version, CancellationToken ct)
         {
-            var championList = new List<Champion>();
-
             var url = string.Format(cChampionsDataUrl, version);
 
-            var championsJson = await ApiController.GetApiResponse(url, ct);
+            var championsJson = await hc.GetStringAsync(url);
             var champions = JsonConvert.DeserializeObject<JObject>(championsJson);
             var data = champions.GetValue("data", StringComparison.OrdinalIgnoreCase);
             var children = data.Children<JProperty>();
@@ -67,12 +67,12 @@ namespace LeagueDeck.Core
             // data, square
             _updateProgressReporter.Total += (uint)children.Count() * 2;
 
-            foreach (var x in children)
+            return (List<Champion>)children.Select(async (x) =>
             {
                 var id = x.Name;
                 url = string.Format(cChampionDataUrl, version, id);
 
-                var championJson = await ApiController.GetApiResponse(url, ct);
+                var championJson = await LiveClientApiController.GetApiResponse(url, ct);
                 var champion = JsonConvert.DeserializeObject<JObject>(championJson);
 
                 var detailedData = champion.GetValue("data", StringComparison.OrdinalIgnoreCase).First.First;
@@ -80,17 +80,15 @@ namespace LeagueDeck.Core
                 var name = detailedData["name"].Value<string>();
                 var spells = JsonConvert.DeserializeObject<List<Spell>>(detailedData["spells"].ToString());
 
-                championList.Add(new Champion
+                _updateProgressReporter.IncrementCurrent();
+
+                return new Champion
                 {
                     Id = id,
                     Name = name,
                     Spells = spells,
-                });
-
-                _updateProgressReporter.IncrementCurrent();
-            }
-
-            return championList;
+                };
+            });
         }
     }
 }

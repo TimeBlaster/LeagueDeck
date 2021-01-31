@@ -13,7 +13,7 @@
       "SupportedInMultiActions": false,
       "Tooltip": "Automagically loads the enemy's spell from selected player into your StreamDeck so you will always know when to predict the enemy",
       "UUID": "dev.timeblaster.leaguedeck.spelltimer",
-      "PropertyInspectorPath": "PropertyInspector/SpellTimer.html"
+      "PropertyInspectorPath": "PropertyInspector/Actions/SpellTimer.html"
     },
     {
       "Icon": "Images/Plugin/buyItem",
@@ -28,7 +28,7 @@
       "SupportedInMultiActions": false,
       "Tooltip": "Displays when the selected item is purchasable and buys it on activation.",
       "UUID": "dev.timeblaster.leaguedeck.buyitem",
-      "PropertyInspectorPath": "PropertyInspector/BuyItem.html"
+      "PropertyInspectorPath": "PropertyInspector/Actions/BuyItem.html"
     }
   ],
   "Author": "TimeBlaster",

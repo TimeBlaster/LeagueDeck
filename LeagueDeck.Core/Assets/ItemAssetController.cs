@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -16,7 +16,7 @@ namespace LeagueDeck.Core
         private const string cItemDataUrl = "https://ddragon.bangingheads.net/cdn/{0}/data/en_US/item.json";
         private const string cItemImageUrl = "https://ddragon.bangingheads.net/cdn/{0}/img/item/{1}.png";
 
-        public override async Task DownloadAssets(string version, CancellationToken ct, bool force = false)
+        public override async Task DownloadAssets(HttpClient hc, string version, CancellationToken ct, bool force = false)
         {
             if (string.IsNullOrWhiteSpace(version))
                 version = await GetLatestVersion(ct);
@@ -27,31 +27,33 @@ namespace LeagueDeck.Core
             if (File.Exists(jsonPath) && !force)
                 return;
 
-            var items = await GetItems(version, ct);
+            var items = await GetItems(hc, version, ct);
 
-            using (var wc = new WebClient())
+            foreach (var item in items)
             {
-                foreach (var item in items)
-                {
-                    var url = string.Format(cItemImageUrl, version, item.Id);
-                    var imgPath = Path.Combine(_imageFolder, $"{item.Id}.png");
-                    await wc.DownloadFileTaskAsync(url, imgPath);
+                var url = string.Format(cItemImageUrl, version, item.Id);
+                var imgPath = Path.Combine(_imageFolder, $"{item.Id}.png");
 
-                    _updateProgressReporter.IncrementCurrent();
+                var response = await hc.GetAsync(url);
+                using(var fs = new FileStream(imgPath, FileMode.Create))
+                {
+                    await response.Content.CopyToAsync(fs);
                 }
+
+                _updateProgressReporter.IncrementCurrent();
             }
 
             var json = JsonConvert.SerializeObject(items);
             File.WriteAllText(jsonPath, json);
         }
 
-        private async Task<List<Item>> GetItems(string version, CancellationToken ct)
+        private async Task<List<Item>> GetItems(HttpClient hc, string version, CancellationToken ct)
         {
             var itemList = new List<Item>();
 
             var url = string.Format(cItemDataUrl, version);
 
-            var itemJson = await ApiController.GetApiResponse(url, ct);
+            var itemJson = await hc.GetStringAsync(url);
             var items = JsonConvert.DeserializeObject<JObject>(itemJson);
             var data = items.GetValue("data", StringComparison.OrdinalIgnoreCase);
             var children = data.Children<JProperty>();
@@ -63,7 +65,6 @@ namespace LeagueDeck.Core
             foreach (var child in children)
             {
                 var id = child.Name;
-
                 var item = child.First;
 
                 var name = item["name"].Value<string>();

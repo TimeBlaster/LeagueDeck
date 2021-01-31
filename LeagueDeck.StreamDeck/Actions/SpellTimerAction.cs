@@ -4,6 +4,7 @@ using LeagueDeck.Models;
 using LeagueDeck.Settings;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Threading;
@@ -32,7 +33,8 @@ namespace LeagueDeck
         private DateTime _endTime;
         private bool _keyPressed = false;
         private bool _longPress = false;
-        private bool _timerEnabled;
+        private bool _isTimerEnabled;
+        private bool _first;
 
         #endregion
 
@@ -49,6 +51,7 @@ namespace LeagueDeck
             updateProgressReporter.OnUpdateCompleted += LeagueInfo_OnUpdateCompleted;
 
             _info = LeagueDeckData.GetInstance(_cts.Token);
+            _info.OnTabOrderChanged += LeagueDeckdata_OnTabOrderChanged;
 
             Connection.OnApplicationDidLaunch += Connection_OnApplicationDidLaunch;
             Connection.OnApplicationDidTerminate += Connection_OnApplicationDidTerminate;
@@ -73,6 +76,35 @@ namespace LeagueDeck
             }
         }
 
+        private async void LeagueDeckdata_OnTabOrderChanged(object sender, PlayerEventArgs e)
+        {
+            if (e.Index != (int)_settings.Summoner)
+                return;
+
+            if (!e.Player.SpellToTimerEnd.TryGetValue(_settings.Spell, out var timerEnd))
+            {
+                // TODO log
+                return;
+            }
+
+            _endTime = timerEnd;
+
+            var diff = _endTime - DateTime.Now;
+            if (diff.TotalSeconds <= 0)
+            {
+                _isTimerEnabled = false;
+                await Connection.SetTitleAsync(string.Empty);
+            }
+            else
+            {
+                _isTimerEnabled = true;
+                string title = _settings.ShowMinutesAndSeconds ? $"{diff.Minutes}:{diff.Seconds:00}" : $"{diff.TotalSeconds:F0}";
+                await Connection.SetTitleAsync(title);
+            }
+
+            await UpdateSpellImage(e.Player);
+        }
+
         #endregion
 
         #region Events
@@ -84,10 +116,11 @@ namespace LeagueDeck
 
             Logger.Instance.LogMessage(TracingLevel.DEBUG, "GameStarted");
 
-            await Task.WhenAll(new[] { _info.LoadGameData(_cts.Token), _info.UpdateTask })
+            await Task.WhenAll(new[] { _info.UpdateTask, _info.UpdatePlayerList(_cts.Token) })
                 .ContinueWith(async (x) =>
                 {
                     _isInGame = true;
+                    _info.StartGameService(_cts.Token);
                     await UpdateSpellImage();
                 });
         }
@@ -101,7 +134,7 @@ namespace LeagueDeck
 
             await ResetTimer();
 
-            _info.ClearGameData();
+            _info.ResetGameService();
 
             _cts.Cancel();
             _cts = new CancellationTokenSource();
@@ -138,26 +171,22 @@ namespace LeagueDeck
             _keyPressed = true;
             _keyPressStart = DateTime.Now;
 
-            if (_timerEnabled)
+            if (_isTimerEnabled)
                 return;
 
-            var enemies = await ApiController.GetEnemies(_cts.Token);
-            if (enemies == null || enemies.Count - 1 < (int)_settings.Summoner)
-                return;
-
-            var participant = enemies.ElementAtOrDefault((int)_settings.Summoner);
-            if (participant == null)
-                return;
-
-            if (!_info.SummonerNameToPlayer.TryGetValue(participant.SummonerName, out var player))
+            if (!_info.IndexToEnemyPlayer.TryGetValue((int)_settings.Summoner, out var player))
             {
-                // TODO log
+                Debug.WriteLine($"Player not found: {_settings.Summoner}");
                 return;
             }
 
+            var participant = await LiveClientApiController.GetParticipant(player.Name, _cts.Token);
+            if (participant == null)
+                return;
+
             if (!player.ESpellToSpell.TryGetValue(_settings.Spell, out var spell))
             {
-                // TODO log
+                Debug.WriteLine($"Spell not found: {player}.{_settings.Spell}");
                 return;
             }
 
@@ -171,9 +200,14 @@ namespace LeagueDeck
                     break;
 
                 case ESpell.R:
-                    var events = await ApiController.GetEventData(_cts.Token);
+                    var enemies = await LiveClientApiController.GetEnemies(_cts.Token);
+                    if (enemies == null || enemies.Count - 1 < (int)_settings.Summoner)
+                        return;
+
                     var enemySummonerNames = enemies.Select(y => y.SummonerName);
-                    var cloudDrakes = events
+
+                    var events = await LiveClientApiController.GetEventData(_cts.Token);
+                    var cloudDrakes = events.Events
                         .Where(x => x.Type == Models.Api.EEventType.DragonKill && x.DragonType == cCloudDrake)
                         .Count(x => enemySummonerNames.Contains(x.KillerName));
 
@@ -182,7 +216,7 @@ namespace LeagueDeck
 
                 case ESpell.SummonerSpell1:
                 case ESpell.SummonerSpell2:
-                    var gameData = await ApiController.GetGameData(_cts.Token);
+                    var gameData = await LiveClientApiController.GetGameData(_cts.Token, DateTime.MinValue);
                     var isAram = gameData.GameMode.Equals(cAram);
 
                     cooldown = _info.GetSummonerSpellCooldown(spell, participant, isAram);
@@ -196,7 +230,8 @@ namespace LeagueDeck
             if (cooldown - _settings.Offset <= 0)
                 return;
 
-            _timerEnabled = true;
+            _first = true;
+            _isTimerEnabled = true;
 
             _endTime = _keyPressStart.AddSeconds(cooldown - _settings.Offset);
             player.SpellToTimerEnd[_settings.Spell] = _endTime;
@@ -212,8 +247,13 @@ namespace LeagueDeck
             }
             else
             {
-                if (_timerEnabled && _settings.SendMessageInChat && !Utilities.InputRunning)
-                    await SendMessageInChat();
+                if (_isTimerEnabled && _first && _settings.SendMessageInChat && !Utilities.InputRunning)
+                {
+                    _first = false;
+                    await SendMessageInChat(EChatFormat.GameTime);
+                }
+                else if (_isTimerEnabled && _settings.SendMessageInChat && !Utilities.InputRunning)
+                    await SendMessageInChat(_settings.ChatFormat);
             }
 
             _longPress = false;
@@ -222,7 +262,7 @@ namespace LeagueDeck
 
         public override async void OnTick()
         {
-            if (_timerEnabled)
+            if (_isTimerEnabled)
             {
                 var diff = _endTime - DateTime.Now;
 
@@ -275,20 +315,17 @@ namespace LeagueDeck
 
         private async Task UpdateSpellImage()
         {
-            var enemies = await ApiController.GetEnemies(_cts.Token);
-            if (enemies == null || enemies.Count - 1 < (int)_settings.Summoner)
-                return;
-
-            var participant = enemies.ElementAtOrDefault((int)_settings.Summoner);
-            if (participant == null)
-                return;
-
-            if (!_info.SummonerNameToPlayer.TryGetValue(participant.SummonerName, out var player))
+            if (!_info.IndexToEnemyPlayer.TryGetValue((int)_settings.Summoner, out var player))
             {
                 // TODO log
                 return;
             }
 
+            await UpdateSpellImage(player);
+        }
+
+        private async Task UpdateSpellImage(Player player)
+        {
             if (!player.ESpellToSpell.TryGetValue(_settings.Spell, out var spell))
             {
                 // TODO log
@@ -310,7 +347,7 @@ namespace LeagueDeck
 
             Image spellImage = _info.SpellAssetController.GetImage(spell?.Id);
 
-            if (_timerEnabled)
+            if (_isTimerEnabled)
                 spellImage = Utilities.GrayscaleImage(spellImage);
 
             var championImage = _info.ChampionAssetController.GetImage(champion?.Id);
@@ -320,28 +357,20 @@ namespace LeagueDeck
             Logger.Instance.LogMessage(TracingLevel.DEBUG, "Spell Image Update - completed");
         }
 
-        private async Task SendMessageInChat()
+        private async Task SendMessageInChat(EChatFormat chatFormat)
         {
-            if (!_timerEnabled)
+            if (!_isTimerEnabled)
                 return;
 
             Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Chat Message - initiated");
 
-            var enemies = await ApiController.GetEnemies(_cts.Token);
-            if (enemies == null || enemies.Count - 1 < (int)_settings.Summoner)
-                return;
-
-            var participant = enemies.ElementAtOrDefault((int)_settings.Summoner);
-            if (participant == null)
-                return;
-
-            if (!_info.SummonerNameToPlayer.TryGetValue(participant.SummonerName, out var player))
+            if (!_info.IndexToEnemyPlayer.TryGetValue((int)_settings.Summoner, out var enemy))
             {
                 // TODO log
                 return;
             }
 
-            if (!player.ESpellToSpell.TryGetValue(_settings.Spell, out var spell))
+            if (!enemy.ESpellToSpell.TryGetValue(_settings.Spell, out var spell))
             {
                 // TODO log
                 return;
@@ -350,10 +379,10 @@ namespace LeagueDeck
             var rest = _endTime - DateTime.Now;
 
             string time;
-            switch (_settings.ChatFormat)
+            switch (chatFormat)
             {
                 case EChatFormat.GameTime:
-                    var gameData = await ApiController.GetGameData(_cts.Token);
+                    var gameData = await LiveClientApiController.GetGameData(_cts.Token);
                     var inGameEndTime = TimeSpan.FromSeconds(gameData.Time).Add(rest);
                     if (inGameEndTime.Seconds == 60)
                     {
@@ -380,9 +409,9 @@ namespace LeagueDeck
 
             string message;
             if (!_settings.ShowAbilityName && _settings.Spell != ESpell.SummonerSpell1 && _settings.Spell != ESpell.SummonerSpell2)
-                message = $"{participant.ChampionName} - {Enum.GetName(typeof(ESpell), _settings.Spell)} - {time}";
+                message = $"{enemy.Champion.Name} - {Enum.GetName(typeof(ESpell), _settings.Spell)} - {time}";
             else
-                message = $"{participant.ChampionName} - {spell.Name} - {time}";
+                message = $"{enemy.Champion.Name} - {spell.Name} - {time}";
 
             Utilities.SendMessageInChat(message);
             Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Chat Message - completed");
@@ -404,7 +433,8 @@ namespace LeagueDeck
         {
             Logger.Instance.LogMessage(TracingLevel.DEBUG, $"Timer Reset - initiated");
 
-            _timerEnabled = false;
+            _endTime = DateTime.MinValue;
+            _isTimerEnabled = false;
 
             if (_isInGame)
             {

@@ -5,12 +5,14 @@ namespace LeagueDeck.Models
 {
     public class Player
     {
+        public string Name { get; }
         public Champion Champion { get; }
         public Dictionary<ESpell, Spell> ESpellToSpell { get; }
         public Dictionary<ESpell, DateTime> SpellToTimerEnd { get; }
 
-        public Player(Champion champion, Dictionary<ESpell, Spell> spellDict)
+        public Player(string name, Champion champion, Dictionary<ESpell, Spell> spellDict)
         {
+            Name = name;
             Champion = champion;
             ESpellToSpell = spellDict;
             SpellToTimerEnd = new Dictionary<ESpell, DateTime>

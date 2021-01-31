@@ -110,13 +110,14 @@ namespace LeagueDeck
             // open chat
             iis.Keyboard.KeyPress(WindowsInput.Native.VirtualKeyCode.RETURN);
 
-            Thread.Sleep(20);
+            // wait for chat to open
+            Thread.Sleep(25);
 
             // enter message
             iis.Keyboard.TextEntry(message);
 
             // fixes the chat not closing, thanks Timmy
-            Thread.Sleep(20);
+            Thread.Sleep(10);
 
             // send message
             iis.Keyboard.KeyPress(WindowsInput.Native.VirtualKeyCode.RETURN);

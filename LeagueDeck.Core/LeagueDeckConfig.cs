@@ -8,5 +8,15 @@ namespace LeagueDeck.Core
     {
         [JsonConverter(typeof(VersionConverter))]
         public Version LeagueDeckVersion { get; set; }
+        public string ApiKey { get; set; }
+
+        public static LeagueDeckConfig CreateDefaultConfig()
+        {
+            return new LeagueDeckConfig
+            {
+                LeagueDeckVersion = Utilities.GetLeagueDeckVersion(),
+                ApiKey = "YOUR_API_KEY",
+            };
+        }
     }
 }

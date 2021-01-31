@@ -4,6 +4,12 @@ using System.Collections.Generic;
 
 namespace LeagueDeck.Models.Api
 {
+    public class GameEvents
+    {
+        [JsonProperty("Events")]
+        public List<GameEvent> Events { get; set; }
+    }
+
     public class GameEvent
     {
         [JsonProperty("EventID")]

@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,7 +20,7 @@ namespace LeagueDeck.Core
 
         private const string cSpellImageUrl = "https://ddragon.bangingheads.net/cdn/{0}/img/spell/{1}.png";
 
-        public override async Task DownloadAssets(string version, CancellationToken ct, bool force = false)
+        public override async Task DownloadAssets(HttpClient hc, string version, CancellationToken ct, bool force = false)
         {
             if (string.IsNullOrWhiteSpace(version))
                 version = await GetLatestVersion(ct);
@@ -31,35 +31,39 @@ namespace LeagueDeck.Core
             if (File.Exists(jsonPath) && !force)
                 return;
 
-            var champions = await GetChampions(version, ct);
+            var champions = await GetChampions(hc, version, ct);
 
-            using (var wc = new WebClient())
+            foreach (var champion in champions)
             {
-                foreach (var champion in champions)
+                foreach (var spell in champion.Spells)
                 {
-                    foreach (var spell in champion.Spells)
+                    var url = string.Format(cSpellImageUrl, version, spell.Id);
+                    var imgPath = Path.Combine(_imageFolder, $"{spell.Id}.png");
+
+                    var response = await hc.GetAsync(url);
+                    using (var fs = new FileStream(imgPath, FileMode.Create))
                     {
-                        var url = string.Format(cSpellImageUrl, version, spell.Id);
-                        var imgPath = Path.Combine(_imageFolder, $"{spell.Id}.png");
-                        await wc.DownloadFileTaskAsync(url, imgPath);
-
-                        _updateProgressReporter.IncrementCurrent();
+                        await response.Content.CopyToAsync(fs);
                     }
-                }
-            }
-
-            var summonerSpells = await GetSummonerSpells(version, ct);
-
-            using (var wc = new WebClient())
-            {
-                foreach (var summonerSpell in summonerSpells)
-                {
-                    var url = string.Format(cSpellImageUrl, version, summonerSpell.Id);
-                    var imgPath = Path.Combine(_imageFolder, $"{summonerSpell.Id}.png");
-                    await wc.DownloadFileTaskAsync(url, imgPath);
 
                     _updateProgressReporter.IncrementCurrent();
                 }
+            }
+
+            var summonerSpells = await GetSummonerSpells(hc, version, ct);
+
+            foreach (var summonerSpell in summonerSpells)
+            {
+                var url = string.Format(cSpellImageUrl, version, summonerSpell.Id);
+                var imgPath = Path.Combine(_imageFolder, $"{summonerSpell.Id}.png");
+
+                var response = await hc.GetAsync(url);
+                using (var fs = new FileStream(imgPath, FileMode.CreateNew))
+                {
+                    await response.Content.CopyToAsync(fs);
+                }
+
+                _updateProgressReporter.IncrementCurrent();
             }
 
             var spells = champions.SelectMany(x => x.Spells).Concat(summonerSpells);
@@ -67,19 +71,20 @@ namespace LeagueDeck.Core
             File.WriteAllText(jsonPath, json);
         }
 
-        private async Task<List<Champion>> GetChampions(string version, CancellationToken ct)
+        private async Task<List<Champion>> GetChampions(HttpClient hc, string version, CancellationToken ct)
         {
             var championList = new List<Champion>();
 
             var url = string.Format(cChampionsDataUrl, version);
 
-            var championsJson = await ApiController.GetApiResponse(url, ct);
+            var championsJson = await hc.GetStringAsync(url);
             var champions = JsonConvert.DeserializeObject<JObject>(championsJson);
             var data = champions.GetValue("data", StringComparison.OrdinalIgnoreCase);
             var children = data.Children<JProperty>();
 
             // 5 requests:
             // data, q, w, e, r
+            // TODO: passive
             _updateProgressReporter.Total += (uint)children.Count() * 5;
 
             foreach (var x in children)
@@ -87,7 +92,7 @@ namespace LeagueDeck.Core
                 var id = x.Name;
                 url = string.Format(cChampionDataUrl, version, id);
 
-                var championJson = await ApiController.GetApiResponse(url, ct);
+                var championJson = await LiveClientApiController.GetApiResponse(url, ct);
                 var champion = JsonConvert.DeserializeObject<JObject>(championJson);
 
                 var detailedData = champion.GetValue("data", StringComparison.OrdinalIgnoreCase).First.First;
@@ -108,13 +113,13 @@ namespace LeagueDeck.Core
             return championList;
         }
 
-        private async Task<List<Spell>> GetSummonerSpells(string version, CancellationToken ct)
+        private async Task<List<Spell>> GetSummonerSpells(HttpClient hc, string version, CancellationToken ct)
         {
             var summonerSpellList = new List<Spell>();
 
             var url = string.Format(cSummonerSpellDataUrl, version);
 
-            var summonerSpellsJson = await ApiController.GetApiResponse(url, ct);
+            var summonerSpellsJson = await hc.GetStringAsync(url);
             var summonerSpells = JsonConvert.DeserializeObject<JObject>(summonerSpellsJson);
             var data = summonerSpells.GetValue("data", StringComparison.OrdinalIgnoreCase);
             var children = data.Children<JProperty>().Select(x => x.First);
